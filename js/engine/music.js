@@ -37,7 +37,14 @@ export class Soundtrack {
   }
 
   async start(style, duration, { volume = 0.5, mood = 'auto' } = {}) {
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    if (this.ctx.state === 'suspended') {
+      // Some browsers never resume sound without a tap: give up after 2 s and go on without music.
+      await Promise.race([this.ctx.resume(), new Promise((r) => setTimeout(r, 2000))]);
+      if (this.ctx.state !== 'running') {
+        this.ctx.close().catch(() => {});
+        throw new Error('Sound is blocked by the browser');
+      }
+    }
     const song = (mood && mood !== 'auto' && SONGS[mood]) || SONGS[style] || SONGS.cinematic;
     const c = this.ctx;
     const t0 = c.currentTime + 0.05;

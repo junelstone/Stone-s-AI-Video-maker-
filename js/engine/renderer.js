@@ -84,8 +84,13 @@ export async function renderVideo(job, io) {
   scenes = planScenes(job.prompt || 'Your story starts here', duration, rng);
   if (job.mode === 'image' && job.images?.length) {
     // One visual beat per photo, captions run on their own timeline.
-    const per = duration / job.images.length;
-    job._imageBeats = job.images.map((img, i) => ({ img, start: i * per, dur: per, motion: Math.floor(rng() * 4) }));
+    if (job.sceneImages) {
+      // One AI picture per scene, timed with that scene's caption.
+      job._imageBeats = scenes.map((s, i) => ({ img: job.images[i % job.images.length], start: s.start, dur: s.dur, motion: Math.floor(rng() * 4) }));
+    } else {
+      const per = duration / job.images.length;
+      job._imageBeats = job.images.map((img, i) => ({ img, start: i * per, dur: per, motion: Math.floor(rng() * 4) }));
+    }
   }
 
   // Simulated thinking time so the steps feel natural, but short.
@@ -113,6 +118,11 @@ export async function renderVideo(job, io) {
       console.warn('Music disabled', e);
       music = null;
     }
+  }
+  if (signal?.aborted) {
+    music?.stop();
+    stream.getTracks().forEach((tr) => tr.stop());
+    throw new DOMException('Cancelled', 'AbortError');
   }
 
   const recorder = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 6_000_000 });

@@ -84,6 +84,14 @@
             </div>
           </div>
 
+          <div class="field" id="visualField">
+            <div class="field-label" data-i18n>Visuals</div>
+            <div class="chips" id="visualChips">
+              <button class="chip active" data-visuals="ai">🎨 <span data-i18n>AI pictures</span> <small class="chip-note" data-i18n>free, about 20 s</small></button>
+              <button class="chip" data-visuals="icons">⚡ <span data-i18n>Animated icons</span> <small class="chip-note" data-i18n>instant</small></button>
+            </div>
+          </div>
+
           <div class="field">
             <div class="field-label" data-i18n>Format</div>
             <div class="chips" id="aspectChips">
@@ -171,6 +179,18 @@
       </div>
     </section>
 
+    <section class="samples" aria-label="Examples">
+      <div class="section-head">
+        <h2 data-i18n>See what you can make</h2>
+        <span class="muted small" data-i18n>Real videos made with this app, in seconds.</span>
+      </div>
+      <div class="samples-grid">
+        <figure><video src="assets/samples/promo.mp4" poster="assets/samples/promo.jpg" autoplay muted loop playsinline preload="metadata"></video><figcaption data-i18n>Shop promo · Anime</figcaption></figure>
+        <figure><video src="assets/samples/church.mp4" poster="assets/samples/church.jpg" autoplay muted loop playsinline preload="metadata"></video><figcaption data-i18n>Sunday service · Cinematic</figcaption></figure>
+        <figure><video src="assets/samples/avatar.mp4" poster="assets/samples/avatar.jpg" autoplay muted loop playsinline preload="metadata"></video><figcaption data-i18n>Talking avatar · Explainer</figcaption></figure>
+      </div>
+    </section>
+
     <section class="how" aria-label="How it works">
       <div class="how-step"><span class="how-n">1</span><div><b data-i18n>Describe it</b><p data-i18n>Type an idea, upload photos or write what your presenter says.</p></div></div>
       <div class="how-step"><span class="how-n">2</span><div><b data-i18n>Pick a style and size</b><p data-i18n>Cinematic, anime, 3D or explainer, for TikTok, YouTube or Instagram.</p></div></div>
@@ -191,7 +211,17 @@
         <h2 data-i18n>My videos</h2>
         <span class="muted" id="galleryNote"></span>
       </div>
+      <div class="gallery-tools hidden" id="galleryTools">
+        <input type="search" id="gallerySearch" placeholder="🔎" aria-label="Search my videos" />
+        <div class="chips" id="galleryModes">
+          <button class="chip active" data-gmode="all" data-i18n>All</button>
+          <button class="chip" data-gmode="text" data-i18n>Text</button>
+          <button class="chip" data-gmode="image" data-i18n>Photo</button>
+          <button class="chip" data-gmode="avatar" data-i18n>Avatar</button>
+        </div>
+      </div>
       <div class="gallery" id="galleryGrid"></div>
+      <p class="muted center hidden" id="galleryNone" data-i18n>No video matches.</p>
       <div class="empty-gallery hidden" id="galleryEmpty"><p data-i18n>No videos yet. Your videos will be saved here.</p><button class="btn btn-primary btn-sm" id="firstVideoBtn" type="button">✨ <span data-i18n>Make your first video</span></button></div>
     </section>
   </main>
