@@ -6,7 +6,9 @@
   <title>Stone's AI Video Maker</title>
   <meta name="description" content="Create AI videos and animations in one click: text to video, image to animation and talking avatars." />
   <meta name="theme-color" content="#0b0b14" />
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Baloo+2:wght@600;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet" />
@@ -15,38 +17,40 @@
 <body>
   <header class="topbar">
     <a class="brand" href="#" aria-label="Stone's AI Video home">
-      <span class="brand-mark">▶</span>
+      <img class="brand-logo" src="assets/icon-192.png" width="38" height="38" alt="" />
       <span class="brand-name">Stone's <b>AI Video</b></span>
     </a>
     <nav class="topnav">
-      <a href="#create">Create</a>
-      <a href="#gallery">My videos</a>
+      <a href="#create" data-i18n>Create</a>
+      <a href="#templates" data-i18n>Templates</a>
+      <a href="#gallery" data-i18n>My videos</a>
     </nav>
     <div class="top-actions">
+      <button class="lang-btn" id="langBtn" type="button" aria-label="Langue / Language">FR</button>
       <button class="credits-pill" id="creditsBtn" title="Your credits">
-        <span class="coin">◆</span> <span id="creditsValue">–</span> credits
+        <span class="coin">◆</span> <span id="creditsValue">–</span> <span data-i18n>credits</span>
       </button>
-      <button class="btn btn-ghost" id="authBtn">Sign in</button>
+      <button class="btn btn-ghost" id="authBtn" data-i18n>Sign in</button>
     </div>
   </header>
 
   <main>
     <section class="hero" id="create">
-      <h1>Create AI videos &amp; animations <span class="grad">in 1 click</span></h1>
-      <p class="sub">Type an idea, drop a photo, or write a script. Pick a style and a size. We do the rest.</p>
+      <h1 data-i18n-html="hero.title">Create AI videos &amp; animations <span class="grad">in 1 click</span></h1>
+      <p class="sub" data-i18n>Type an idea, drop a photo, or write a script. Pick a style and a size. We do the rest.</p>
 
       <div class="studio">
         <div class="panel composer">
           <div class="mode-tabs" role="tablist">
-            <button role="tab" class="mode-tab active" data-mode="text"><span>✍️</span> Text to video</button>
-            <button role="tab" class="mode-tab" data-mode="image"><span>🖼️</span> Image to animation</button>
-            <button role="tab" class="mode-tab" data-mode="avatar"><span>🗣️</span> Talking avatar</button>
+            <button role="tab" class="mode-tab active" data-mode="text"><span>✍️</span> <em data-i18n>Text to video</em></button>
+            <button role="tab" class="mode-tab" data-mode="image"><span>🖼️</span> <em data-i18n>Image to animation</em></button>
+            <button role="tab" class="mode-tab" data-mode="avatar"><span>🗣️</span> <em data-i18n>Talking avatar</em></button>
           </div>
 
           <div class="prompt-wrap">
-            <textarea id="prompt" rows="4" maxlength="600" placeholder="A lone astronaut walks across a glowing ocean at sunset. The stars wake up. A new journey begins."></textarea>
+            <textarea id="prompt" rows="3" maxlength="600" aria-label="Your idea"></textarea>
             <div class="prompt-tools">
-              <button class="chip-btn" id="surpriseBtn" type="button">🎲 Surprise me</button>
+              <button class="chip-btn" id="surpriseBtn" type="button">🎲 <span data-i18n>Surprise me</span></button>
               <span class="count" id="promptCount">0 / 600</span>
             </div>
           </div>
@@ -55,58 +59,82 @@
             <label class="dropzone" id="dropzone">
               <input type="file" id="imageInput" accept="image/*" multiple hidden />
               <span class="dz-icon">⬆</span>
-              <span><b>Drop photos here</b> or click to upload (up to 6)</span>
+              <span data-i18n-html="drop.label"><b>Drop photos here</b> or click to upload (up to 6)</span>
             </label>
             <div class="thumbs" id="thumbs"></div>
           </div>
 
           <div class="field avatar-field hidden" id="avatarField">
-            <div class="field-label">Choose your presenter</div>
+            <div class="field-label" data-i18n>Choose your presenter</div>
             <div class="avatar-picker" id="avatarPicker"></div>
             <div class="voice-row">
-              <label for="voiceSelect">Voice</label>
+              <label for="voiceSelect" data-i18n>Voice</label>
               <select id="voiceSelect"></select>
-              <button class="chip-btn" id="voiceTest" type="button">▶ Test</button>
+              <button class="chip-btn" id="voiceTest" type="button">▶ <span data-i18n>Test</span></button>
             </div>
           </div>
 
           <div class="field">
-            <div class="field-label">Style</div>
+            <div class="field-label" data-i18n>Style</div>
             <div class="chips" id="styleChips">
-              <button class="chip active" data-style="cinematic">🎬 Cinematic</button>
+              <button class="chip active" data-style="cinematic">🎬 <span data-i18n>Cinematic</span></button>
               <button class="chip" data-style="anime">🌸 Anime</button>
               <button class="chip" data-style="3d">🧊 3D</button>
-              <button class="chip" data-style="explainer">💡 Explainer</button>
+              <button class="chip" data-style="explainer">💡 <span data-i18n>Explainer</span></button>
             </div>
           </div>
 
           <div class="field">
-            <div class="field-label">Format</div>
+            <div class="field-label" data-i18n>Format</div>
             <div class="chips" id="aspectChips">
               <button class="chip active" data-aspect="9:16"><i class="ar ar-916"></i> TikTok / Reels</button>
               <button class="chip" data-aspect="16:9"><i class="ar ar-169"></i> YouTube</button>
-              <button class="chip" data-aspect="1:1"><i class="ar ar-11"></i> Instagram square</button>
-              <button class="chip" data-aspect="4:5"><i class="ar ar-45"></i> Instagram post</button>
+              <button class="chip" data-aspect="1:1"><i class="ar ar-11"></i> <span data-i18n>Instagram square</span></button>
+              <button class="chip" data-aspect="4:5"><i class="ar ar-45"></i> <span data-i18n>Instagram post</span></button>
             </div>
           </div>
 
           <div class="field row">
             <div class="grow" id="durationWrap">
-              <div class="field-label">Length <span id="durationLabel">8s</span></div>
+              <div class="field-label"><em data-i18n>Length</em> <span id="durationLabel">8s</span></div>
               <input type="range" id="duration" min="4" max="20" step="1" value="8" />
             </div>
             <label class="toggle">
               <input type="checkbox" id="musicToggle" checked />
               <span class="slider"></span>
-              <span>🎵 Music</span>
+              <span>🎵 <em data-i18n>Music</em></span>
             </label>
           </div>
 
+          <details class="more" id="moreOptions">
+            <summary data-i18n>More options: music mood and your logo</summary>
+            <div class="more-body">
+              <label class="more-row"><span data-i18n>Music mood</span>
+                <select id="moodSelect">
+                  <option value="auto" data-i18n>Auto (matches the style)</option>
+                  <option value="calm" data-i18n>Calm</option>
+                  <option value="upbeat" data-i18n>Upbeat</option>
+                  <option value="afro" data-i18n>Afro groove</option>
+                  <option value="gospel" data-i18n>Gospel</option>
+                </select>
+              </label>
+              <div class="more-row">
+                <span data-i18n>Your logo on the video</span>
+                <div class="logo-row">
+                  <img id="logoPreview" class="logo-preview hidden" alt="Your logo" />
+                  <label class="chip-btn logo-btn"><input type="file" id="logoInput" accept="image/*" hidden /><span data-i18n>Upload logo</span></label>
+                  <button type="button" class="chip-btn hidden" id="logoRemove" data-i18n>Remove</button>
+                </div>
+              </div>
+              <p class="fine" id="brandNote">Paid plans remove the small "Stone's AI Video" mark.</p>
+            </div>
+          </details>
+
           <button class="btn btn-primary btn-xl" id="generateBtn">
-            <span>✨ Generate video</span>
+            <span>✨ <em data-i18n>Generate video</em></span>
             <span class="cost" id="costLabel">1 credit</span>
           </button>
-          <p class="fine" id="engineNote">Demo engine: rendered right in your browser, free and private.</p>
+          <p class="fine" id="engineNote" data-i18n>Demo engine: rendered right in your browser, free and private.</p>
         </div>
 
         <div class="panel stage">
@@ -115,52 +143,68 @@
             <video id="resultVideo" playsinline controls loop class="hidden"></video>
             <div class="screen-empty" id="screenEmpty">
               <div class="pulse">▶</div>
-              <p>Your video shows up here</p>
+              <p data-i18n>Your video shows up here</p>
             </div>
           </div>
 
           <div class="progress hidden" id="progress">
             <div class="progress-top">
-              <span id="progressStage">Getting ready…</span>
+              <span id="progressStage" data-i18n>Getting ready…</span>
               <span id="progressPct">0%</span>
             </div>
             <div class="bar"><div class="bar-fill" id="progressFill"></div></div>
             <ol class="steps" id="steps">
-              <li data-step="plan">Writing scenes</li>
-              <li data-step="render">Animating</li>
-              <li data-step="encode">Finishing</li>
+              <li data-step="plan" data-i18n>Writing scenes</li>
+              <li data-step="render" data-i18n>Animating</li>
+              <li data-step="encode" data-i18n>Finishing</li>
             </ol>
-            <button class="btn btn-ghost btn-sm" id="cancelBtn">Cancel</button>
+            <button class="btn btn-ghost btn-sm" id="cancelBtn" data-i18n>Cancel</button>
           </div>
 
           <div class="result-actions hidden" id="resultActions">
-            <button class="btn btn-primary" id="downloadBtn">⬇ Download</button>
-            <button class="btn btn-ghost" id="shareBtn">↗ Share</button>
-            <button class="btn btn-ghost" id="againBtn">↻ Make another</button>
+            <button class="btn btn-primary" id="downloadBtn">⬇ <span data-i18n>Download</span></button>
+            <button class="btn btn-ghost" id="shareBtn">↗ <span data-i18n>Share</span></button>
+            <button class="btn btn-ghost" id="againBtn">↻ <span data-i18n>Make another</span></button>
           </div>
-          <p class="fine center hidden" id="avatarNote">Tip: the voice plays live in the preview. Downloaded avatar videos include captions and music.</p>
+          <p class="fine center hidden" id="avatarNote" data-i18n>Tip: the voice plays live in the preview. Downloaded avatar videos include captions and music.</p>
         </div>
       </div>
     </section>
 
-    <section class="inspo">
-      <h2>Need an idea?</h2>
+    <section class="how" aria-label="How it works">
+      <div class="how-step"><span class="how-n">1</span><div><b data-i18n>Describe it</b><p data-i18n>Type an idea, upload photos or write what your presenter says.</p></div></div>
+      <div class="how-step"><span class="how-n">2</span><div><b data-i18n>Pick a style and size</b><p data-i18n>Cinematic, anime, 3D or explainer, for TikTok, YouTube or Instagram.</p></div></div>
+      <div class="how-step"><span class="how-n">3</span><div><b data-i18n>Download and share</b><p data-i18n>Your video is ready in seconds. Post it on WhatsApp, TikTok or Facebook.</p></div></div>
+    </section>
+
+    <section class="inspo" id="templates">
+      <div class="section-head">
+        <h2 data-i18n>Templates</h2>
+        <span class="muted small" data-i18n>Tap one to fill the studio, then press Generate.</span>
+      </div>
+      <div class="chips tpl-cats" id="tplCats"></div>
       <div class="inspo-grid" id="inspoGrid"></div>
     </section>
 
     <section class="gallery-section" id="gallery">
       <div class="section-head">
-        <h2>My videos</h2>
-        <span class="muted" id="galleryNote">Saved on this device</span>
+        <h2 data-i18n>My videos</h2>
+        <span class="muted" id="galleryNote"></span>
       </div>
       <div class="gallery" id="galleryGrid"></div>
-      <p class="empty-gallery hidden" id="galleryEmpty">No videos yet. Make your first one above ✨</p>
+      <div class="empty-gallery hidden" id="galleryEmpty"><p data-i18n>No videos yet. Your videos will be saved here.</p><button class="btn btn-primary btn-sm" id="firstVideoBtn" type="button">✨ <span data-i18n>Make your first video</span></button></div>
     </section>
   </main>
 
   <footer class="footer">
     <span>© <span id="year"></span> Stone's AI Video</span>
-    <button class="linklike" id="engineBtn">AI engine settings</button>
+    <nav class="footer-links">
+      <button class="linklike" id="contactBtn" type="button" data-i18n>Contact us</button>
+      <button class="linklike" id="plansLink" type="button" data-i18n>Plans &amp; prices</button>
+      <a href="terms.html" data-i18n>Terms</a>
+      <a href="privacy.html" data-i18n>Privacy</a>
+      <button class="linklike" id="engineBtn" type="button" data-i18n>AI engine settings</button>
+    </nav>
   </footer>
 
   <!-- Auth modal -->
@@ -169,8 +213,9 @@
       <button class="modal-x" value="cancel" formnovalidate aria-label="Close">×</button>
       <h3 id="authTitle">Welcome back</h3>
       <p class="muted" id="authSub">Sign in to save your videos to the cloud and get 30 free credits.</p>
-      <label>Email<input type="email" id="authEmail" required autocomplete="email" /></label>
-      <label>Password<input type="password" id="authPassword" required minlength="6" autocomplete="current-password" /></label>
+      <label><span data-i18n>Email</span><input type="email" id="authEmail" required autocomplete="email" /></label>
+      <label><span data-i18n>Password</span><input type="password" id="authPassword" required minlength="6" autocomplete="current-password" /></label>
+      <button type="button" class="linklike forgot" id="forgotBtn" data-i18n>Forgot password?</button>
       <p class="form-error hidden" id="authError"></p>
       <button class="btn btn-primary btn-block" id="authSubmit" value="default">Sign in</button>
       <p class="muted center small">
@@ -184,22 +229,22 @@
   <dialog class="modal" id="accountModal">
     <form method="dialog" class="modal-card">
       <button class="modal-x" value="cancel" aria-label="Close">×</button>
-      <h3>Your account</h3>
+      <h3 data-i18n>Your account</h3>
       <p class="muted" id="accountEmail"></p>
       <div class="stat-row">
-        <div class="stat"><b id="accountCredits">–</b><span>credits</span></div>
-        <div class="stat"><b id="accountVideos">–</b><span>videos</span></div>
-        <div class="stat"><b id="accountPlan">Free</b><span>plan</span></div>
+        <div class="stat"><b id="accountCredits">–</b><span data-i18n>credits</span></div>
+        <div class="stat"><b id="accountVideos">–</b><span data-i18n>videos</span></div>
+        <div class="stat"><b id="accountPlan">Free</b><span data-i18n>plan</span></div>
       </div>
       <div class="sub-box hidden" id="subBox"></div>
       <div class="key-box" id="keyBox">
-        <label>Have an activation key?
-          <span class="key-row"><input id="keyInput" placeholder="SAV-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" /><button type="button" class="btn btn-ghost" id="keyBtn">Activate</button></span>
+        <label><span data-i18n>Have an activation key?</span>
+          <span class="key-row"><input id="keyInput" placeholder="SAV-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" /><button type="button" class="btn btn-ghost" id="keyBtn" data-i18n>Activate</button></span>
         </label>
         <p class="form-error hidden" id="keyError"></p>
       </div>
-      <button type="button" class="btn btn-primary btn-block" id="accountBuy">◆ Get more credits</button>
-      <button type="button" class="btn btn-ghost btn-block" id="signOutBtn">Sign out</button>
+      <button type="button" class="btn btn-primary btn-block" id="accountBuy"></button>
+      <button type="button" class="btn btn-ghost btn-block" id="signOutBtn" data-i18n>Sign out</button>
     </form>
   </dialog>
 
@@ -207,11 +252,11 @@
   <dialog class="modal" id="creditsModal">
     <form method="dialog" class="modal-card wide pricing-card">
       <button class="modal-x" value="cancel" aria-label="Close">×</button>
-      <h3>Plans &amp; credits</h3>
-      <p class="muted">Text and photo videos cost 1 credit, talking avatars cost 2. Plans give <b>unlimited videos</b>.</p>
-      <div class="price-head">Unlimited plans</div>
+      <h3 data-i18n>Plans &amp; credits</h3>
+      <p class="muted" data-i18n-html="plans.sub">Text and photo videos cost 1 credit, talking avatars cost 2. Plans give <b>unlimited videos</b>.</p>
+      <div class="price-head" data-i18n>Unlimited plans</div>
       <div class="plans" id="plansGrid"></div>
-      <div class="price-head">Or buy credits once</div>
+      <div class="price-head" data-i18n>Or buy credits once</div>
       <div class="packs" id="packsGrid"></div>
       <div class="howpay" id="howPay"></div>
     </form>
@@ -221,8 +266,8 @@
   <dialog class="modal" id="engineModal">
     <form method="dialog" class="modal-card wide">
       <button class="modal-x" value="cancel" aria-label="Close">×</button>
-      <h3>AI engine</h3>
-      <p class="muted">Pick which engine makes your videos. Pro engines plug in once an API key is added on the server.</p>
+      <h3 data-i18n>AI engine</h3>
+      <p class="muted" data-i18n>Pick which engine makes your videos. Pro engines plug in once an API key is added on the server.</p>
       <div class="engines" id="engineList"></div>
     </form>
   </dialog>
@@ -238,12 +283,24 @@
           <p class="muted small" id="playerInfo"></p>
         </div>
         <div class="player-actions">
-          <button class="btn btn-ghost btn-sm" id="playerDownload">⬇</button>
-          <button class="btn btn-ghost btn-sm" id="playerShare">↗</button>
-          <button class="btn btn-ghost btn-sm danger" id="playerDelete">🗑</button>
+          <button class="btn btn-ghost btn-sm hidden" id="playerBackup" title="Save to cloud">☁ <span data-i18n>Save to cloud</span></button>
+          <button class="btn btn-ghost btn-sm" id="playerDownload" title="Download">⬇</button>
+          <button class="btn btn-ghost btn-sm" id="playerShare" title="Share">↗</button>
+          <button class="btn btn-ghost btn-sm danger" id="playerDelete" title="Delete">🗑</button>
         </div>
       </div>
     </div>
+  </dialog>
+
+  <!-- New password modal (after a reset link) -->
+  <dialog class="modal" id="resetModal">
+    <form method="dialog" class="modal-card" id="resetForm">
+      <h3 data-i18n>Choose a new password</h3>
+      <p class="muted" data-i18n>Type your new password, then you are signed in.</p>
+      <label><span data-i18n>New password</span><input type="password" id="newPassword" required minlength="6" autocomplete="new-password" /></label>
+      <p class="form-error hidden" id="resetError"></p>
+      <button class="btn btn-primary btn-block" id="resetSubmit" value="default" data-i18n>Save password</button>
+    </form>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

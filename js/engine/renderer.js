@@ -107,7 +107,7 @@ export async function renderVideo(job, io) {
   if (job.music) {
     try {
       music = new Soundtrack();
-      await music.start(job.style, duration, { volume: job.mode === 'avatar' ? 0.22 : 0.5 });
+      await music.start(job.style, duration, { volume: job.mode === 'avatar' ? 0.22 : 0.5, mood: job.mood });
       stream.addTrack(music.track);
     } catch (e) {
       console.warn('Music disabled', e);
@@ -168,7 +168,7 @@ export async function renderVideo(job, io) {
       else if (live && state.speechEnded) end = Math.max(2, (state.speechEndAt - t0) / 1000 + 0.9);
       frame(Math.min(t, end), talking ? Infinity : end);
       onProgress(0.06 + 0.9 * Math.min(0.99, clamp(t / Math.max(duration, end))));
-      if (!thumb && t > Math.min(end * 0.4, 3)) thumb = snapshot(canvas);
+      if (!thumb && t > Math.min(end * 0.5, 4)) thumb = snapshot(canvas);
       if (t >= end) return resolve();
       raf = requestAnimationFrame(tick);
     };
@@ -207,19 +207,30 @@ function drawFrame(ctx, f) {
   else drawTextMode(ctx, f);
 
   // Global fade from / to black.
-  const fade = 1 - clamp(Math.min(t / 0.5, (duration - t) / 0.6));
+  const fade = 1 - clamp(Math.min(t / 0.25, (duration - t) / 0.6));
   if (fade > 0) {
     ctx.fillStyle = `rgba(0,0,0,${fade})`;
     ctx.fillRect(0, 0, W, H);
   }
-  // Small brand mark
-  ctx.globalAlpha = 0.55;
-  ctx.font = `700 ${Math.round(Math.min(W, H) * 0.024)}px Inter, sans-serif`;
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'bottom';
-  ctx.fillStyle = job.style === 'explainer' ? '#1e1b4b' : '#ffffff';
   const bar = job.style === 'cinematic' ? (W > H ? H * 0.09 : H * 0.06) : 0;
-  ctx.fillText("Stone's AI Video", W - 18, H - 14 - bar);
+  // The customer's own logo, top right.
+  if (job.logo) {
+    const box = Math.min(W, H) * 0.13;
+    const r = Math.min(box / job.logo.width, box / job.logo.height);
+    const lw = job.logo.width * r, lh = job.logo.height * r;
+    ctx.globalAlpha = 0.92;
+    ctx.drawImage(job.logo, W - lw - Math.min(W, H) * 0.04, bar + Math.min(W, H) * 0.04, lw, lh);
+    ctx.globalAlpha = 1;
+  }
+  // Small brand mark (not on paid plans)
+  if (job.brandMark !== false) {
+    ctx.globalAlpha = 0.55;
+    ctx.font = `700 ${Math.round(Math.min(W, H) * 0.024)}px Inter, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = job.style === 'explainer' ? '#1e1b4b' : '#ffffff';
+    ctx.fillText("Stone's AI Video", W - 18, H - 14 - bar);
+  }
   ctx.restore();
 }
 
@@ -391,7 +402,14 @@ function drawAvatarMode(ctx, f) {
       const y = by + fs * 0.4 + li * lineH;
       for (const word of l.split(' ')) {
         const on = wi === idx;
-        ctx.fillStyle = on ? '#fde047' : wi < ci || (idx < 0 && state.speechEnded) ? '#ffffff' : 'rgba(255,255,255,0.75)';
+        if (on) {
+          // Current word: bright pill behind it, dark text on top.
+          const ww = ctx.measureText(word).width;
+          ctx.fillStyle = '#fde047';
+          roundRect(ctx, x - fs * 0.18, y - fs * 0.12, ww + fs * 0.36, fs * 1.22, fs * 0.3);
+          ctx.fill();
+          ctx.fillStyle = '#111827';
+        } else ctx.fillStyle = wi < ci || (idx < 0 && state.speechEnded) ? '#ffffff' : 'rgba(255,255,255,0.75)';
         ctx.fillText(word, x, y);
         x += ctx.measureText(word + ' ').width;
         wi++;

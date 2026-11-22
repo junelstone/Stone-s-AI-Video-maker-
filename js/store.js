@@ -75,7 +75,7 @@ async function uploadToCloud(item, user) {
   if (error) throw error;
   ({ error } = await bucket.upload(thumbPath, dataUrlToBlob(item.thumb), { contentType: 'image/jpeg', upsert: true }));
   if (error) throw error;
-  ({ error } = await supabase.from('videos').insert({
+  ({ error } = await supabase.from('videos').upsert({
     id: item.id,
     user_id: user.id,
     title: item.title,
@@ -88,8 +88,21 @@ async function uploadToCloud(item, user) {
     storage_path: videoPath,
     thumb_path: thumbPath,
     engine: item.engine,
-  }));
+  }, { onConflict: 'id', ignoreDuplicates: true }));
   if (error) throw error;
+}
+
+// Copy a video that is only on this device to the cloud.
+export async function backupVideo(item) {
+  const user = currentUser();
+  if (!user || !supabase) throw new Error('Sign in first');
+  const local = item.blob ? item : await localStore.get(item.id);
+  if (!local?.blob) throw new Error('This video is not on this device');
+  await uploadToCloud(local, user);
+  const saved = { ...local, cloud: true };
+  delete saved.cloudError;
+  await localStore.put(saved);
+  return saved;
 }
 
 // Cloud videos not on this device yet.

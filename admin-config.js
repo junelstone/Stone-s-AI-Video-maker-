@@ -11,7 +11,7 @@ window.ADMIN_CONFIG = {
   defaultTier: "pro",
   phoneHint: "+242…",
   payMethods: ["Mobile money", "Airtel Money", "MTN MoMo", "Cash", "Bank transfer", "Card", "Free / gift"],
-  logo: "assets/favicon.svg",
+  logo: "assets/icon-192.png",
   // Credit packs sold in the app (js/config.js PRICING.packs): quick buttons in "Add credits".
   creditPacks: [{ credits: 50, price: 1000 }, { credits: 200, price: 3000 }, { credits: 600, price: 7500 }]
 };

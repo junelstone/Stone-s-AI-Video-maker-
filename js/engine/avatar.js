@@ -4,10 +4,10 @@ import { roundRect, clamp } from './util.js';
 const TAU = Math.PI * 2;
 
 export const AVATARS = {
-  nova: { name: 'Nova', skin: '#f2c7a5', hair: '#7c3aed', hairStyle: 'long', shirt: '#ec4899', eye: '#3b2a5a', pitch: 1.15 },
-  leo: { name: 'Leo', skin: '#8d5a3b', hair: '#1c1917', hairStyle: 'short', shirt: '#2563eb', eye: '#1c1917', pitch: 0.85, beard: true },
-  mia: { name: 'Mia', skin: '#f5d0b5', hair: '#f97316', hairStyle: 'bob', shirt: '#10b981', eye: '#14532d', pitch: 1.25 },
-  bolt: { name: 'Bolt', robot: true, skin: '#cbd5e1', hair: '#64748b', shirt: '#334155', eye: '#22d3ee', pitch: 0.7 },
+  nova: { name: 'Nova', skin: '#f2c7a5', hair: '#7c3aed', hairStyle: 'long', shirt: '#ec4899', eye: '#3b2a5a', pitch: 1.1, gender: 'female' },
+  leo: { name: 'Leo', skin: '#8d5a3b', hair: '#1c1917', hairStyle: 'short', shirt: '#2563eb', eye: '#1c1917', pitch: 0.95, beard: true, gender: 'male' },
+  mia: { name: 'Mia', skin: '#f5d0b5', hair: '#f97316', hairStyle: 'bob', shirt: '#10b981', eye: '#14532d', pitch: 1.2, gender: 'female' },
+  bolt: { name: 'Bolt', robot: true, skin: '#cbd5e1', hair: '#64748b', shirt: '#334155', eye: '#22d3ee', pitch: 0.7, gender: 'male' },
 };
 
 /**

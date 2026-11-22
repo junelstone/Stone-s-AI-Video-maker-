@@ -57,9 +57,9 @@ const cinematic = {
   background(ctx, t, st, W, H, scene) {
     const hue = (scene.hue + 200) % 360;
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, `hsl(${hue}, 45%, 9%)`);
-    g.addColorStop(0.6, `hsl(${(hue + 30) % 360}, 40%, 14%)`);
-    g.addColorStop(1, `hsl(28, 55%, 18%)`);
+    g.addColorStop(0, `hsl(${hue}, 50%, 17%)`);
+    g.addColorStop(0.6, `hsl(${(hue + 30) % 360}, 45%, 25%)`);
+    g.addColorStop(1, `hsl(28, 60%, 30%)`);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     ctx.globalCompositeOperation = 'lighter';
@@ -68,7 +68,7 @@ const cinematic = {
       const y = (o.y + Math.cos(t * 0.12 + o.p) * 0.1) * H;
       const r = o.r * Math.max(W, H);
       const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
-      rg.addColorStop(0, `hsla(${(o.p * 57 + 20) % 60 + 15}, 90%, 55%, 0.22)`);
+      rg.addColorStop(0, `hsla(${(o.p * 57 + 20) % 60 + 15}, 90%, 60%, 0.3)`);
       rg.addColorStop(1, 'hsla(0,0%,0%,0)');
       ctx.fillStyle = rg;
       ctx.fillRect(0, 0, W, H);
@@ -131,10 +131,10 @@ const cinematic = {
     });
   },
   overlay(ctx, t, st, W, H) {
-    vignette(ctx, W, H, 0.7);
-    // Film grain
+    vignette(ctx, W, H, 0.5);
+    // Film grain (light, so the picture stays clean)
     ctx.save();
-    ctx.globalAlpha = 0.9;
+    ctx.globalAlpha = 0.45;
     const ox = Math.floor(Math.random() * 256), oy = Math.floor(Math.random() * 256);
     ctx.translate(-ox, -oy);
     ctx.fillStyle = ctx.createPattern(st.grain, 'repeat');

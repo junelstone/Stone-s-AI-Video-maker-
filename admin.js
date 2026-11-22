@@ -69,8 +69,9 @@ async function route(){
     <p class="small muted">${t("First time? Create your account in the app with the same email, then come back here.")} <a href="${h(appUrl())}">${t("Open the app")}</a></p></form>`); return; }
   const { data:isAdmin } = await sb.rpc("is_platform_admin");
   if (!isAdmin){ $("#app").innerHTML = frame(`<div class="card"><h2>${t("Not an admin account")}</h2><p>${t("Signed in as {e}.", {e:h(AD.session.user.email)})}</p>
-    <p class="small muted">${t("Setting up the platform for the first time? Claim it now. Only the very first account can do this.")}</p>
-    <div class="row"><button class="btn primary" data-act="claim">${t("Claim platform owner")}</button><button class="btn" data-act="signout">${t("Sign out")}</button></div></div>`); return; }
+    <p>${t("This account is not the platform owner. Sign out, then sign in with the owner account.")}</p>
+    <div class="row"><button class="btn primary" data-act="signout">${t("Sign out")}</button><a class="btn" href="${h(appUrl())}">${t("Back to the app")}</a></div>
+    <p class="small muted">${t("Setting up the platform for the first time? Only the very first account can claim it.")} <button class="btn sm" data-act="claim">${t("Claim platform owner")}</button></p></div>`); return; }
   await loadAll(); render();
 }
 async function loadAll(){
@@ -97,7 +98,7 @@ function render(){
   const rows = AD.rows.filter(s => (AD.filter==="all" || statusOf(s)[0]===AD.filter) && (!q || [s.name,s.owner_name,s.phone,s.email,s.city,s.license_key].join(" ").toLowerCase().includes(q)));
   $("#app").innerHTML = `<div class="page">
   <div class="topbar"><div class="logo row">${logo()}<div><h1>${t("Admin console")}</h1><span class="small muted">${h(AD.session.user.email)}</span></div></div>
-    <div class="row">${langSwitch()}<button class="btn" data-act="credits">${t("Add credits")}</button><button class="btn" data-act="settings">${t("Platform settings")}</button><button class="btn primary" data-act="newrow">${t("New {u}", {u:U1().toLowerCase()})}</button><button class="btn" data-act="signout">${t("Sign out")}</button></div></div>
+    <div class="row">${langSwitch()}<a class="btn" href="${h(appUrl())}" target="_blank" rel="noopener">${t("Open the app")}</a><button class="btn" data-act="credits">${t("Add credits")}</button><button class="btn" data-act="settings">${t("Platform settings")}</button><button class="btn primary" data-act="newrow">${t("New {u}", {u:U1().toLowerCase()})}</button><button class="btn" data-act="signout">${t("Sign out")}</button></div></div>
   <div class="grid g4">
     <div class="card stat"><span class="k">${t("Paying")}</span><span class="v">${cnt("active")+cnt("soon")}</span><span class="s">${t("{n} on trial", {n:cnt("trial")})}</span></div>
     <div class="card stat"><span class="k">${t("Ending within 7 days")}</span><span class="v">${cnt("soon")}</span><span class="s">${t("remind them to renew")}</span></div>
