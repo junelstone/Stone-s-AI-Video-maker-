@@ -148,3 +148,11 @@ drop policy if exists "videos bucket: delete own" on storage.objects;
 create policy "videos bucket: delete own" on storage.objects
   for delete to authenticated
   using (bucket_id = 'videos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+-- 5. Table permissions for signed-in users --------------------------------
+-- Some new Supabase projects don't grant table access by default.
+-- Row level security above still limits each user to their own rows.
+grant usage on schema public to authenticated;
+grant select on public.profiles to authenticated;
+grant select on public.credit_transactions to authenticated;
+grant select, insert, delete on public.videos to authenticated;
