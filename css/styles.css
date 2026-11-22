@@ -282,6 +282,13 @@ select {
 .player-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .player-actions { display: flex; gap: 6px; }
 
+/* Subscription */
+.sub-box { border: 1px solid rgba(139,92,246,0.5); background: rgba(139,92,246,0.12); border-radius: 12px; padding: 12px 14px; font-size: 0.92rem; }
+.sub-box b { display: block; font-size: 1rem; }
+.sub-box.ended { border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.1); }
+.key-row { display: flex; gap: 8px; }
+.key-row input { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, monospace; letter-spacing: 0.04em; text-transform: uppercase; }
+
 /* Toast */
 .toast {
   position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 30px); opacity: 0; pointer-events: none;

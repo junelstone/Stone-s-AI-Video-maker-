@@ -66,12 +66,25 @@ as $$
 declare
   uid uuid := auth.uid();
   new_balance integer;
+  unlimited boolean := false;
 begin
   if uid is null then
     raise exception 'Not signed in';
   end if;
   if amount < 1 or amount > 20 then
     raise exception 'Invalid amount';
+  end if;
+  -- Members of a paid subscription (admin page, migrations/002) make videos without spending credits.
+  if to_regclass('public.members') is not null then
+    execute 'select exists (select 1 from public.members m join public.tenants t on t.id = m.tenant_id
+             where m.user_id = $1 and m.active and t.status = ''active'' and t.expires_at > now())'
+      into unlimited using uid;
+  end if;
+  if unlimited then
+    insert into public.credit_transactions (user_id, amount, reason)
+    values (uid, 0, left(coalesce(reason, 'video'), 60) || ' (subscription)');
+    select credits into new_balance from public.profiles where id = uid;
+    return coalesce(new_balance, 0);
   end if;
   update public.profiles
      set credits = credits - amount

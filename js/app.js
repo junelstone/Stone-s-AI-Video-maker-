@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { PROVIDERS, getProvider, isSupported } from './providers.js';
 import { AVATARS, drawAvatarIcon } from './engine/avatar.js';
-import { supabase, initAuth, onAuthChange, currentUser, signIn, signUp, signOut, getProfile, spendCredits, cloudEnabled } from './supabase.js';
+import { supabase, initAuth, onAuthChange, currentUser, signIn, signUp, signOut, getProfile, spendCredits, cloudEnabled, activateKey } from './supabase.js';
 import { localStore, saveVideo, listCloudVideos, signedVideoUrl, deleteVideo } from './store.js';
 
 const $ = (s) => document.querySelector(s);
@@ -175,7 +175,15 @@ function selectedVoice() {
 /* ---------------- Credits & auth UI ---------------- */
 async function refreshCredits() {
   state.profile = await getProfile();
-  $('#creditsValue').textContent = state.profile.credits;
+  const pill = $('#creditsBtn');
+  if (state.profile.unlimited) {
+    pill.innerHTML = '<span class="coin">◆</span> Unlimited';
+    pill.title = `${state.profile.sub.name} subscription`;
+  } else {
+    pill.innerHTML = '<span class="coin">◆</span> <span id="creditsValue"></span> credits';
+    $('#creditsValue').textContent = state.profile.credits;
+    pill.title = 'Your credits';
+  }
 }
 
 function updateAuthUI() {
@@ -214,7 +222,51 @@ async function openAccount() {
   $('#accountCredits').textContent = state.profile.credits;
   $('#accountPlan').textContent = (state.profile.plan || 'free').replace(/^./, (c) => c.toUpperCase());
   $('#accountVideos').textContent = state.gallery.length;
+  renderSubscription();
+  $('#keyError').classList.add('hidden');
+  $('#keyInput').value = '';
   $('#accountModal').showModal();
+}
+
+const TIER_NAMES = { basic: 'Starter', pro: 'Pro', business: 'Studio' };
+function renderSubscription() {
+  const sub = state.profile.sub;
+  const box = $('#subBox');
+  box.classList.toggle('hidden', !sub);
+  $('#keyBox').classList.toggle('hidden', !!sub?.open);
+  if (!sub) return;
+  const until = new Date(sub.expires_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  box.classList.toggle('ended', !sub.open);
+  box.innerHTML = '<b></b><span></span>';
+  box.querySelector('b').textContent = `${TIER_NAMES[sub.tier] || 'Pro'} subscription · ${sub.name}`;
+  box.querySelector('span').textContent = sub.open
+    ? `Unlimited videos until ${until}.`
+    : `Ended on ${until}. Renew it to get unlimited videos again.`;
+  if (sub.open) $('#accountPlan').textContent = TIER_NAMES[sub.tier] || 'Pro';
+}
+
+async function activate() {
+  const key = $('#keyInput').value.trim();
+  const err = $('#keyError');
+  err.classList.add('hidden');
+  if (key.length < 8) {
+    err.textContent = 'Type the full key, like SAV-7KQ2-M9XD-4TPA.';
+    err.classList.remove('hidden');
+    return;
+  }
+  $('#keyBtn').disabled = true;
+  try {
+    await activateKey(key);
+    await refreshCredits();
+    renderSubscription();
+    $('#accountPlan').textContent = TIER_NAMES[state.profile.sub?.tier] || 'Pro';
+    toast('Activated! Enjoy unlimited videos ✨');
+  } catch (e) {
+    err.textContent = e.message || 'Could not activate this key';
+    err.classList.remove('hidden');
+  } finally {
+    $('#keyBtn').disabled = false;
+  }
 }
 
 /* ---------------- Generate ---------------- */
@@ -273,7 +325,7 @@ async function generate() {
   }
   const price = cost();
   await refreshCredits();
-  if (state.profile.credits < price) {
+  if (!state.profile.unlimited && state.profile.credits < price) {
     if (state.profile.guest && cloudEnabled()) {
       toast(`You're out of free credits. Create a free account for ${CONFIG.SIGNUP_CREDITS} more!`, 4000);
       openAuth('signup');
@@ -585,6 +637,13 @@ function bind() {
       $('#authSubmit').disabled = false;
     }
   });
+  $('#keyBtn').onclick = activate;
+  $('#keyInput').onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      activate();
+    }
+  };
   $('#signOutBtn').onclick = async () => {
     await signOut();
     $('#accountModal').close();

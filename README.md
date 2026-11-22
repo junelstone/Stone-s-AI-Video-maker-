@@ -39,6 +39,17 @@ netlify.toml          hosting settings
 
 This creates `profiles` (with credits), `credit_transactions`, `videos` and a private `videos` storage bucket. Row level security means each user only sees their own videos and credits, and credits can only go down through the `spend_credits` function.
 
+## Admin page (`/admin.html`)
+
+A console for you, the platform owner, to sell subscriptions: create subscriber accounts with an activation key (like `SAV-7KQ2-M9XD-4TPA`), record mobile money or cash payments that extend the subscription, chase renewals on WhatsApp, manage each subscriber's users and passwords, see a business dashboard and export everything to Excel.
+
+Members of an active subscription make **unlimited videos** (no credits spent). A customer types their key in **My account → Have an activation key?** in the app.
+
+Setup, one time:
+1. Supabase → SQL Editor → run [`supabase/migrations/002_admin_platform.sql`](supabase/migrations/002_admin_platform.sql) (after `schema.sql`; safe to run again). If you ran `schema.sql` before this change, run it again too so credits are skipped for subscribers.
+2. Open `https://<your-site>/admin.html`, sign in with your app account and click **Claim platform owner** (only the very first account can).
+3. In **Platform settings**, set the support phone, currency and prices.
+
 ## Run locally
 
 It's a static site with no build step:
