@@ -79,11 +79,21 @@ function guestCredits() {
 
 export async function getProfile() {
   if (!user || !supabase) return { credits: guestCredits(), plan: 'guest', guest: true };
-  const { data, error } = await supabase.from('profiles').select('credits, plan').eq('id', user.id).maybeSingle();
+  const [{ data, error }, sub] = await Promise.all([
+    supabase.from('profiles').select('credits, plan').eq('id', user.id).maybeSingle(),
+    supabase.rpc('my_subscription').then((r) => r.data || null, () => null),
+  ]);
   if (error || !data) {
     console.warn('Profile not found', error);
-    return { credits: guestCredits(), plan: 'free', missing: true };
+    return { credits: guestCredits(), plan: 'free', missing: true, sub };
   }
+  return { ...data, sub, unlimited: !!sub?.open };
+}
+
+// Join a subscription with the activation key the admin sent.
+export async function activateKey(key) {
+  const { data, error } = await supabase.rpc('activate_tenant', { p_key: key.trim(), p_name: '' });
+  if (error) throw error;
   return data;
 }
 

@@ -191,6 +191,13 @@
         <div class="stat"><b id="accountVideos">–</b><span>videos</span></div>
         <div class="stat"><b id="accountPlan">Free</b><span>plan</span></div>
       </div>
+      <div class="sub-box hidden" id="subBox"></div>
+      <div class="key-box" id="keyBox">
+        <label>Have an activation key?
+          <span class="key-row"><input id="keyInput" placeholder="SAV-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" /><button type="button" class="btn btn-ghost" id="keyBtn">Activate</button></span>
+        </label>
+        <p class="form-error hidden" id="keyError"></p>
+      </div>
       <button type="button" class="btn btn-primary btn-block" id="accountBuy">◆ Get more credits</button>
       <button type="button" class="btn btn-ghost btn-block" id="signOutBtn">Sign out</button>
     </form>
