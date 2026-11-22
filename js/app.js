@@ -580,8 +580,8 @@ async function generate() {
     let onProgress = setProgress;
     let renderJob = job;
     if (job.mode === 'text' && state.visuals === 'ai' && provider.id === 'demo') {
-      // Free AI pictures first (about half of the bar), then animate them.
-      setStage('plan', 'Drawing AI pictures…');
+      // A free AI picture first (about half of the bar), then animate it.
+      setStage('plan', 'Drawing the AI picture…');
       try {
         const pics = await scenePictures(job, { onProgress: (p) => setProgress(0.02 + p * 0.45), signal: state.abort.signal });
         renderJob = { ...job, mode: 'image', images: pics, sceneImages: true };
@@ -589,7 +589,7 @@ async function generate() {
       } catch (e) {
         if (e.name === 'AbortError') throw e;
         console.warn(e);
-        toast(t('AI pictures are busy right now, using animated icons instead.'), 4000);
+        toast(t('The free AI picture service allows one picture about every 45 seconds. This video uses animated icons instead.'), 6000);
       }
     }
     const out = await provider.generate(renderJob, {
