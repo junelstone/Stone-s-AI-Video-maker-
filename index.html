@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stone's AI Video Maker</title>
+  <meta name="description" content="Create AI videos and animations in one click: text to video, image to animation and talking avatars." />
+  <meta name="theme-color" content="#0b0b14" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Baloo+2:wght@600;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Stone's AI Video home">
+      <span class="brand-mark">▶</span>
+      <span class="brand-name">Stone's <b>AI Video</b></span>
+    </a>
+    <nav class="topnav">
+      <a href="#create">Create</a>
+      <a href="#gallery">My videos</a>
+    </nav>
+    <div class="top-actions">
+      <button class="credits-pill" id="creditsBtn" title="Your credits">
+        <span class="coin">◆</span> <span id="creditsValue">–</span> credits
+      </button>
+      <button class="btn btn-ghost" id="authBtn">Sign in</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="create">
+      <h1>Create AI videos &amp; animations <span class="grad">in 1 click</span></h1>
+      <p class="sub">Type an idea, drop a photo, or write a script. Pick a style and a size. We do the rest.</p>
+
+      <div class="studio">
+        <div class="panel composer">
+          <div class="mode-tabs" role="tablist">
+            <button role="tab" class="mode-tab active" data-mode="text"><span>✍️</span> Text to video</button>
+            <button role="tab" class="mode-tab" data-mode="image"><span>🖼️</span> Image to animation</button>
+            <button role="tab" class="mode-tab" data-mode="avatar"><span>🗣️</span> Talking avatar</button>
+          </div>
+
+          <div class="prompt-wrap">
+            <textarea id="prompt" rows="4" maxlength="600" placeholder="A lone astronaut walks across a glowing ocean at sunset. The stars wake up. A new journey begins."></textarea>
+            <div class="prompt-tools">
+              <button class="chip-btn" id="surpriseBtn" type="button">🎲 Surprise me</button>
+              <span class="count" id="promptCount">0 / 600</span>
+            </div>
+          </div>
+
+          <div class="field image-field hidden" id="imageField">
+            <label class="dropzone" id="dropzone">
+              <input type="file" id="imageInput" accept="image/*" multiple hidden />
+              <span class="dz-icon">⬆</span>
+              <span><b>Drop photos here</b> or click to upload (up to 6)</span>
+            </label>
+            <div class="thumbs" id="thumbs"></div>
+          </div>
+
+          <div class="field avatar-field hidden" id="avatarField">
+            <div class="field-label">Choose your presenter</div>
+            <div class="avatar-picker" id="avatarPicker"></div>
+            <div class="voice-row">
+              <label for="voiceSelect">Voice</label>
+              <select id="voiceSelect"></select>
+              <button class="chip-btn" id="voiceTest" type="button">▶ Test</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Style</div>
+            <div class="chips" id="styleChips">
+              <button class="chip active" data-style="cinematic">🎬 Cinematic</button>
+              <button class="chip" data-style="anime">🌸 Anime</button>
+              <button class="chip" data-style="3d">🧊 3D</button>
+              <button class="chip" data-style="explainer">💡 Explainer</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Format</div>
+            <div class="chips" id="aspectChips">
+              <button class="chip active" data-aspect="9:16"><i class="ar ar-916"></i> TikTok / Reels</button>
+              <button class="chip" data-aspect="16:9"><i class="ar ar-169"></i> YouTube</button>
+              <button class="chip" data-aspect="1:1"><i class="ar ar-11"></i> Instagram square</button>
+              <button class="chip" data-aspect="4:5"><i class="ar ar-45"></i> Instagram post</button>
+            </div>
+          </div>
+
+          <div class="field row">
+            <div class="grow" id="durationWrap">
+              <div class="field-label">Length <span id="durationLabel">8s</span></div>
+              <input type="range" id="duration" min="4" max="20" step="1" value="8" />
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="musicToggle" checked />
+              <span class="slider"></span>
+              <span>🎵 Music</span>
+            </label>
+          </div>
+
+          <button class="btn btn-primary btn-xl" id="generateBtn">
+            <span>✨ Generate video</span>
+            <span class="cost" id="costLabel">1 credit</span>
+          </button>
+          <p class="fine" id="engineNote">Demo engine: rendered right in your browser, free and private.</p>
+        </div>
+
+        <div class="panel stage">
+          <div class="screen" id="screen" data-aspect="9:16">
+            <canvas id="canvas"></canvas>
+            <video id="resultVideo" playsinline controls loop class="hidden"></video>
+            <div class="screen-empty" id="screenEmpty">
+              <div class="pulse">▶</div>
+              <p>Your video shows up here</p>
+            </div>
+          </div>
+
+          <div class="progress hidden" id="progress">
+            <div class="progress-top">
+              <span id="progressStage">Getting ready…</span>
+              <span id="progressPct">0%</span>
+            </div>
+            <div class="bar"><div class="bar-fill" id="progressFill"></div></div>
+            <ol class="steps" id="steps">
+              <li data-step="plan">Writing scenes</li>
+              <li data-step="render">Animating</li>
+              <li data-step="encode">Finishing</li>
+            </ol>
+            <button class="btn btn-ghost btn-sm" id="cancelBtn">Cancel</button>
+          </div>
+
+          <div class="result-actions hidden" id="resultActions">
+            <button class="btn btn-primary" id="downloadBtn">⬇ Download</button>
+            <button class="btn btn-ghost" id="shareBtn">↗ Share</button>
+            <button class="btn btn-ghost" id="againBtn">↻ Make another</button>
+          </div>
+          <p class="fine center hidden" id="avatarNote">Tip: the voice plays live in the preview. Downloaded avatar videos include captions and music.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="inspo">
+      <h2>Need an idea?</h2>
+      <div class="inspo-grid" id="inspoGrid"></div>
+    </section>
+
+    <section class="gallery-section" id="gallery">
+      <div class="section-head">
+        <h2>My videos</h2>
+        <span class="muted" id="galleryNote">Saved on this device</span>
+      </div>
+      <div class="gallery" id="galleryGrid"></div>
+      <p class="empty-gallery hidden" id="galleryEmpty">No videos yet. Make your first one above ✨</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>© <span id="year"></span> Stone's AI Video</span>
+    <button class="linklike" id="engineBtn">AI engine settings</button>
+  </footer>
+
+  <!-- Auth modal -->
+  <dialog class="modal" id="authModal">
+    <form method="dialog" class="modal-card" id="authForm">
+      <button class="modal-x" value="cancel" formnovalidate aria-label="Close">×</button>
+      <h3 id="authTitle">Welcome back</h3>
+      <p class="muted" id="authSub">Sign in to save your videos to the cloud and get 30 free credits.</p>
+      <label>Email<input type="email" id="authEmail" required autocomplete="email" /></label>
+      <label>Password<input type="password" id="authPassword" required minlength="6" autocomplete="current-password" /></label>
+      <p class="form-error hidden" id="authError"></p>
+      <button class="btn btn-primary btn-block" id="authSubmit" value="default">Sign in</button>
+      <p class="muted center small">
+        <span id="authSwitchText">New here?</span>
+        <button type="button" class="linklike" id="authSwitch">Create an account</button>
+      </p>
+    </form>
+  </dialog>
+
+  <!-- Account modal -->
+  <dialog class="modal" id="accountModal">
+    <form method="dialog" class="modal-card">
+      <button class="modal-x" value="cancel" aria-label="Close">×</button>
+      <h3>Your account</h3>
+      <p class="muted" id="accountEmail"></p>
+      <div class="stat-row">
+        <div class="stat"><b id="accountCredits">–</b><span>credits</span></div>
+        <div class="stat"><b id="accountVideos">–</b><span>videos</span></div>
+        <div class="stat"><b id="accountPlan">Free</b><span>plan</span></div>
+      </div>
+      <button type="button" class="btn btn-primary btn-block" id="accountBuy">◆ Get more credits</button>
+      <button type="button" class="btn btn-ghost btn-block" id="signOutBtn">Sign out</button>
+    </form>
+  </dialog>
+
+  <!-- Credits modal -->
+  <dialog class="modal" id="creditsModal">
+    <form method="dialog" class="modal-card wide">
+      <button class="modal-x" value="cancel" aria-label="Close">×</button>
+      <h3>Get more credits</h3>
+      <p class="muted">Text and image videos cost 1 credit. Talking avatars cost 2.</p>
+      <div class="packs">
+        <div class="pack"><b>Starter</b><span class="big">50</span><span>credits</span><span class="price">$4.99</span></div>
+        <div class="pack featured"><span class="badge">Best value</span><b>Creator</b><span class="big">200</span><span>credits</span><span class="price">$14.99</span></div>
+        <div class="pack"><b>Studio</b><span class="big">600</span><span>credits</span><span class="price">$34.99</span></div>
+      </div>
+      <p class="notice">💳 Payments are coming soon. For now, enjoy your free credits!</p>
+    </form>
+  </dialog>
+
+  <!-- Engine modal -->
+  <dialog class="modal" id="engineModal">
+    <form method="dialog" class="modal-card wide">
+      <button class="modal-x" value="cancel" aria-label="Close">×</button>
+      <h3>AI engine</h3>
+      <p class="muted">Pick which engine makes your videos. Pro engines plug in once an API key is added on the server.</p>
+      <div class="engines" id="engineList"></div>
+    </form>
+  </dialog>
+
+  <!-- Player modal -->
+  <dialog class="modal" id="playerModal">
+    <div class="modal-card player-card">
+      <button class="modal-x" id="playerClose" aria-label="Close">×</button>
+      <video id="playerVideo" playsinline controls autoplay loop></video>
+      <div class="player-meta">
+        <div>
+          <b id="playerTitle"></b>
+          <p class="muted small" id="playerInfo"></p>
+        </div>
+        <div class="player-actions">
+          <button class="btn btn-ghost btn-sm" id="playerDownload">⬇</button>
+          <button class="btn btn-ghost btn-sm" id="playerShare">↗</button>
+          <button class="btn btn-ghost btn-sm danger" id="playerDelete">🗑</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
