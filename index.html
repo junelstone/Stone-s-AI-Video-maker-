@@ -203,18 +203,17 @@
     </form>
   </dialog>
 
-  <!-- Credits modal -->
+  <!-- Plans & credits modal -->
   <dialog class="modal" id="creditsModal">
-    <form method="dialog" class="modal-card wide">
+    <form method="dialog" class="modal-card wide pricing-card">
       <button class="modal-x" value="cancel" aria-label="Close">×</button>
-      <h3>Get more credits</h3>
-      <p class="muted">Text and image videos cost 1 credit. Talking avatars cost 2.</p>
-      <div class="packs">
-        <div class="pack"><b>Starter</b><span class="big">50</span><span>credits</span><span class="price">$4.99</span></div>
-        <div class="pack featured"><span class="badge">Best value</span><b>Creator</b><span class="big">200</span><span>credits</span><span class="price">$14.99</span></div>
-        <div class="pack"><b>Studio</b><span class="big">600</span><span>credits</span><span class="price">$34.99</span></div>
-      </div>
-      <p class="notice">💳 Payments are coming soon. For now, enjoy your free credits!</p>
+      <h3>Plans &amp; credits</h3>
+      <p class="muted">Text and photo videos cost 1 credit, talking avatars cost 2. Plans give <b>unlimited videos</b>.</p>
+      <div class="price-head">Unlimited plans</div>
+      <div class="plans" id="plansGrid"></div>
+      <div class="price-head">Or buy credits once</div>
+      <div class="packs" id="packsGrid"></div>
+      <div class="howpay" id="howPay"></div>
     </form>
   </dialog>
 

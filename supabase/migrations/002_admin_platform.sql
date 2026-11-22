@@ -22,10 +22,15 @@ create table if not exists public.platform_settings (
   currency text not null default 'FCFA',
   trial_days int not null default 14,
   tiers jsonb not null default
-    '{"basic":{"users":1,"monthly":3000,"yearly":30000},"pro":{"users":3,"monthly":7000,"yearly":70000},"business":{"users":10,"monthly":15000,"yearly":150000}}'::jsonb,
+    '{"basic":{"users":1,"monthly":2500,"yearly":25000},"pro":{"users":3,"monthly":5000,"yearly":50000},"business":{"users":10,"monthly":12000,"yearly":120000}}'::jsonb,
   updated_at timestamptz not null default now()
 );
 insert into public.platform_settings (id) values (1) on conflict do nothing;
+-- Weekly pass price (shown in the app, used by the "+1 week" button).
+alter table public.platform_settings add column if not exists weekly_price numeric not null default 1000;
+-- Move the first draft prices to the November 2026 prices, unless you already changed them.
+update public.platform_settings set tiers = '{"basic":{"users":1,"monthly":2500,"yearly":25000},"pro":{"users":3,"monthly":5000,"yearly":50000},"business":{"users":10,"monthly":12000,"yearly":120000}}'::jsonb
+ where id = 1 and tiers = '{"basic":{"users":1,"monthly":3000,"yearly":30000},"pro":{"users":3,"monthly":7000,"yearly":70000},"business":{"users":10,"monthly":15000,"yearly":150000}}'::jsonb;
 
 create or replace function public.is_platform_admin()
 returns boolean language sql stable security definer set search_path = public as $$
@@ -254,7 +259,7 @@ end $$;
 -- Prices for a public sales page (no login needed).
 create or replace function public.public_pricing()
 returns jsonb language sql stable security definer set search_path = public as $$
-  select jsonb_build_object('brand', brand, 'currency', currency, 'trial_days', trial_days, 'tiers', tiers,
+  select jsonb_build_object('brand', brand, 'currency', currency, 'trial_days', trial_days, 'tiers', tiers, 'weekly_price', weekly_price,
     'support_phone', support_phone, 'support_whatsapp', support_whatsapp, 'support_email', support_email)
   from public.platform_settings where id = 1;
 $$;
@@ -325,3 +330,37 @@ revoke all on function public.my_subscription() from public, anon;
 grant execute on function public.my_subscription() to authenticated;
 
 -- spend_credits() in schema.sql already skips credits for members of an open subscription.
+
+-- ---------- credit packs ----------
+-- The owner adds credits a customer bought (mobile money, cash...). Returns the new balance.
+create or replace function public.admin_add_credits(p_email text, p_credits integer, p_paid numeric default 0, p_note text default '')
+returns integer language plpgsql security definer set search_path = public, auth as $$
+declare uid uuid; bal integer;
+begin
+  if not public.is_platform_admin() then raise exception 'Not allowed'; end if;
+  if coalesce(p_credits, 0) = 0 or abs(p_credits) > 100000 then raise exception 'Enter a number of credits.'; end if;
+  select id into uid from auth.users where lower(email) = lower(trim(coalesce(p_email, '')));
+  if uid is null then raise exception 'No app account uses this email. Ask the customer to sign up first.'; end if;
+  insert into public.profiles (id, display_name) values (uid, split_part(p_email, '@', 1)) on conflict (id) do nothing;
+  update public.profiles set credits = greatest(0, credits + p_credits) where id = uid returning credits into bal;
+  insert into public.credit_transactions (user_id, amount, reason)
+  values (uid, p_credits, left(trim(both ' ·' from concat_ws(' · ', 'Bought', nullif(coalesce(p_paid, 0), 0)::text || ' paid', nullif(trim(coalesce(p_note, '')), ''))), 120));
+  return bal;
+end $$;
+revoke all on function public.admin_add_credits(text, integer, numeric, text) from public, anon;
+grant execute on function public.admin_add_credits(text, integer, numeric, text) to authenticated;
+
+-- Recent credit sales for the admin page.
+create or replace function public.admin_credit_sales(p_limit integer default 50)
+returns table (email text, amount integer, reason text, created_at timestamptz)
+language plpgsql stable security definer set search_path = public, auth as $$
+begin
+  if not public.is_platform_admin() then raise exception 'Not allowed'; end if;
+  return query
+    select u.email::text, c.amount, c.reason, c.created_at
+    from public.credit_transactions c join auth.users u on u.id = c.user_id
+    where c.reason like 'Bought%'
+    order by c.created_at desc limit greatest(1, least(p_limit, 500));
+end $$;
+revoke all on function public.admin_credit_sales(integer) from public, anon;
+grant execute on function public.admin_credit_sales(integer) to authenticated;
