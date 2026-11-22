@@ -85,6 +85,7 @@ export const FR = {
   'Hi, I\'m {name}. Ready when you are!': 'Bonjour, je suis {name}. Prêt quand vous l\'êtes !',
 
   'Visuals': 'Images',
+  'fits your text': 'adapté à votre texte',
   'AI picture': 'Image IA',
   'free, about 10 s': 'gratuit, environ 10 s',
   'Animated icons': 'Icônes animées',

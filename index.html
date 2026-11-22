@@ -48,10 +48,10 @@
           </div>
 
           <div class="prompt-wrap">
-            <textarea id="prompt" rows="3" maxlength="600" aria-label="Your idea"></textarea>
+            <textarea id="prompt" rows="3" maxlength="2000" aria-label="Your idea"></textarea>
             <div class="prompt-tools">
               <button class="chip-btn" id="surpriseBtn" type="button">🎲 <span data-i18n>Surprise me</span></button>
-              <span class="count" id="promptCount">0 / 600</span>
+              <span class="count" id="promptCount">0 / 2000</span>
             </div>
           </div>
 
@@ -105,7 +105,7 @@
           <div class="field row">
             <div class="grow" id="durationWrap">
               <div class="field-label"><em data-i18n>Length</em> <span id="durationLabel">8s</span></div>
-              <input type="range" id="duration" min="4" max="20" step="1" value="8" />
+              <input type="range" id="duration" min="4" max="90" step="1" value="8" />
             </div>
             <label class="toggle">
               <input type="checkbox" id="musicToggle" checked />

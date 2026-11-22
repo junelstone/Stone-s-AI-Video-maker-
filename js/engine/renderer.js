@@ -39,6 +39,9 @@ async function loadFonts(style) {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Keep long videos under the 100 MB storage limit (about 70 MB, leaving room).
+const bitrateFor = (seconds) => Math.round(Math.min(6_000_000, (70 * 8 * 1_000_000) / Math.max(1, seconds)));
+
 // Estimate when each word is spoken, used for captions and lip sync.
 function wordTimeline(script, rate = 1) {
   const words = script.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
@@ -79,7 +82,7 @@ export async function renderVideo(job, io) {
     av = AVATARS[job.avatar] || AVATARS.nova;
     words = wordTimeline(job.prompt || 'Hello! Welcome to my channel.');
     const last = words[words.length - 1];
-    duration = Math.min(90, last.start + last.dur + 1.2);
+    duration = Math.min(180, last.start + last.dur + 1.2);
   }
   scenes = planScenes(job.prompt || 'Your story starts here', duration, rng);
   if (job.mode === 'image' && job.images?.length) {
@@ -125,7 +128,7 @@ export async function renderVideo(job, io) {
     throw new DOMException('Cancelled', 'AbortError');
   }
 
-  const recorder = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 6_000_000 });
+  const recorder = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: bitrateFor(duration) });
   const chunks = [];
   recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   const stopped = new Promise((res) => (recorder.onstop = res));

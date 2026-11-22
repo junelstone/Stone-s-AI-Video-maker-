@@ -864,6 +864,7 @@ function renderLanguage() {
     $('#prompt').value = f[getLang()];
     updateCount();
   }
+  showDuration();
   $('#langBtn').textContent = getLang() === 'fr' ? 'EN' : 'FR';
   $('#langBtn').title = getLang() === 'fr' ? 'Switch to English' : 'Passer en français';
   $('#prompt').placeholder = PLACEHOLDERS[getLang()][state.mode];
@@ -894,8 +895,28 @@ async function contactUs() {
   window.open(`https://wa.me/${supportNumber}?text=${encodeURIComponent(t('Hello! I have a question about Stone\'s AI Video.'))}`, '_blank', 'noopener');
 }
 
+const MAX_TEXT = 2000;
+const MAX_LENGTH_S = 90;
+
 function updateCount() {
-  $('#promptCount').textContent = `${$('#prompt').value.length} / 600`;
+  $('#promptCount').textContent = `${$('#prompt').value.length} / ${MAX_TEXT}`;
+  fitLengthToText();
+}
+
+// Long text needs a longer video so every caption can be read: about 2.6 words a second.
+function fitLengthToText() {
+  const words = $('#prompt').value.trim().split(/\s+/).filter(Boolean).length;
+  const need = Math.min(MAX_LENGTH_S, Math.ceil(words / 2.6 + 2));
+  if (need > state.duration) {
+    state.duration = need;
+    $('#duration').value = need;
+    state.durationFitted = true;
+  }
+  showDuration();
+}
+
+function showDuration() {
+  $('#durationLabel').textContent = state.duration + 's' + (state.durationFitted ? ' · ' + t('fits your text') : '');
 }
 
 /* ---------------- Wire up ---------------- */
@@ -905,7 +926,8 @@ function bind() {
   $$('#aspectChips .chip').forEach((b) => (b.onclick = () => setAspect(b.dataset.aspect)));
   $('#duration').oninput = (e) => {
     state.duration = +e.target.value;
-    $('#durationLabel').textContent = state.duration + 's';
+    state.durationFitted = false;
+    showDuration();
   };
   $('#musicToggle').onchange = (e) => (state.music = e.target.checked);
   $('#prompt').oninput = () => { updateCount(); markStale(); };
