@@ -48,7 +48,19 @@ Members of an active subscription make **unlimited videos** (no credits spent). 
 Setup, one time:
 1. Supabase → SQL Editor → run [`supabase/migrations/002_admin_platform.sql`](supabase/migrations/002_admin_platform.sql) (after `schema.sql`; safe to run again). If you ran `schema.sql` before this change, run it again too so credits are skipped for subscribers.
 2. Open `https://<your-site>/admin.html`, sign in with your app account and click **Claim platform owner** (only the very first account can).
-3. In **Platform settings**, set the support phone, currency and prices.
+3. In **Platform settings**, set the support WhatsApp (customers' "Choose" buttons message it), currency, prices and the weekly pass price.
+
+### Prices (November 2026)
+
+| Plan | Price |
+|---|---|
+| Weekly pass | 1 000 FCFA / week |
+| Starter (1 user) | 2 500 FCFA / month, 25 000 / year |
+| Pro (3 users) | 5 000 FCFA / month, 50 000 / year |
+| Studio (10 users) | 12 000 FCFA / month, 120 000 / year |
+| Credit packs | 50 for 1 000, 200 for 3 000, 600 for 7 500 FCFA |
+
+Plan prices and the weekly price come from Platform settings. Credit packs are set in `js/config.js` and `admin-config.js`. When a customer pays for credits, use **Add credits** on the admin page.
 
 ## Run locally
 

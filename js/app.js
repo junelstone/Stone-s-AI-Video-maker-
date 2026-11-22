@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import { PROVIDERS, getProvider, isSupported } from './providers.js';
 import { AVATARS, drawAvatarIcon } from './engine/avatar.js';
-import { supabase, initAuth, onAuthChange, currentUser, signIn, signUp, signOut, getProfile, spendCredits, cloudEnabled, activateKey } from './supabase.js';
+import { supabase, initAuth, onAuthChange, currentUser, signIn, signUp, signOut, getProfile, spendCredits, cloudEnabled, activateKey, getPricing } from './supabase.js';
 import { localStore, saveVideo, listCloudVideos, signedVideoUrl, deleteVideo } from './store.js';
 
 const $ = (s) => document.querySelector(s);
@@ -269,6 +269,66 @@ async function activate() {
   }
 }
 
+/* ---------------- Plans & credits ---------------- */
+let pricingCache = null;
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fcfa = (n, cur) => `${Math.round(Number(n) || 0).toLocaleString('en-US').replace(/,/g, '\u00a0')}\u00a0${cur}`;
+
+async function openPricing() {
+  renderPricing(pricingCache);
+  $('#creditsModal').showModal();
+  if (!pricingCache) {
+    pricingCache = await getPricing().catch(() => null);
+    if (pricingCache) renderPricing(pricingCache);
+  }
+}
+
+function renderPricing(remote) {
+  const P = CONFIG.PRICING;
+  const cur = remote?.currency || P.currency;
+  const weekly = remote?.weekly_price ?? P.weekly;
+  const tiers = Object.entries(P.tiers).map(([k, d]) => ({ k, ...d, ...(remote?.tiers?.[k] || {}) }));
+  const wa = String(remote?.support_whatsapp || remote?.support_phone || '').replace(/[^0-9]/g, '');
+  const email = currentUser()?.email;
+  const link = (what) => `https://wa.me/${wa}?text=${encodeURIComponent(`Hello! I want ${what} on Stone's AI Video.${email ? ` My account email: ${email}.` : ''} I paid by mobile money, transaction ID: `)}`;
+  const choose = (what, primary) => wa
+    ? `<a class="btn ${primary ? 'btn-primary' : 'btn-ghost'} btn-choose" target="_blank" rel="noopener" href="${esc(link(what))}">Choose</a>`
+    : '';
+
+  const plans = [
+    { name: 'Weekly pass', amt: weekly, per: 'week', meta: '1 user · try it for a campaign', what: `the Weekly pass (${fcfa(weekly, cur)})` },
+    ...tiers.map((t) => ({
+      name: t.name, amt: t.monthly, per: 'month', featured: t.k === 'pro',
+      meta: `${t.users} user${t.users > 1 ? 's' : ''} · or ${fcfa(t.yearly, cur)} a year`,
+      what: `the ${t.name} plan (${fcfa(t.monthly, cur)} per month or ${fcfa(t.yearly, cur)} per year)`,
+    })),
+  ];
+  $('#plansGrid').innerHTML = plans.map((p) => `
+    <div class="plan${p.featured ? ' featured' : ''}">
+      ${p.featured ? '<span class="badge">Most popular</span>' : ''}
+      <b>${esc(p.name)}</b>
+      <span class="amt">${esc(fcfa(p.amt, cur))} <small>/ ${p.per}</small></span>
+      <span class="meta">Unlimited videos · ${esc(p.meta)}</span>
+      ${choose(p.what, p.featured)}
+    </div>`).join('');
+
+  $('#packsGrid').innerHTML = P.packs.map((k) => `
+    <div class="pack${k.best ? ' featured' : ''}">
+      ${k.best ? '<span class="badge">Best value</span>' : ''}
+      <span class="big">${k.credits}</span><span>credits</span>
+      <span class="price">${esc(fcfa(k.price, cur))}</span>
+      ${choose(`${k.credits} credits (${fcfa(k.price, cur)})`, k.best)}
+    </div>`).join('');
+
+  $('#howPay').innerHTML = wa
+    ? `<b>How to pay</b><ol>
+        <li>Send the amount by ${esc(P.payMethods)} to <b>+${esc(wa)}</b>.</li>
+        <li>Tap <b>Choose</b> to send us the transaction ID on WhatsApp${email ? '' : ' (sign in first so we know your account)'}.</li>
+        <li>We add your credits or send your activation key the same day. Enter the key in <b>My account</b>.</li>
+      </ol>`
+    : `<b>How to pay</b><p class="small">Pay by ${esc(P.payMethods)}. Payment details are coming soon, contact us to subscribe.</p>`;
+}
+
 /* ---------------- Generate ---------------- */
 function slug(s) {
   return (s || 'video').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'video';
@@ -329,7 +389,7 @@ async function generate() {
     if (state.profile.guest && cloudEnabled()) {
       toast(`You're out of free credits. Create a free account for ${CONFIG.SIGNUP_CREDITS} more!`, 4000);
       openAuth('signup');
-    } else $('#creditsModal').showModal();
+    } else openPricing();
     return;
   }
 
@@ -651,9 +711,9 @@ function bind() {
   };
   $('#accountBuy').onclick = () => {
     $('#accountModal').close();
-    $('#creditsModal').showModal();
+    openPricing();
   };
-  $('#creditsBtn').onclick = () => $('#creditsModal').showModal();
+  $('#creditsBtn').onclick = openPricing;
   $('#engineBtn').onclick = () => {
     renderEngines();
     $('#engineModal').showModal();

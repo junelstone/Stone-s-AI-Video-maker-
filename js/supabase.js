@@ -112,3 +112,10 @@ export async function spendCredits(amount, reason) {
   }
   return data;
 }
+
+// Public prices and support contact from the admin page settings.
+export async function getPricing() {
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc('public_pricing');
+  return error ? null : data;
+}

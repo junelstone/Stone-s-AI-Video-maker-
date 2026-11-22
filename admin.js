@@ -97,7 +97,7 @@ function render(){
   const rows = AD.rows.filter(s => (AD.filter==="all" || statusOf(s)[0]===AD.filter) && (!q || [s.name,s.owner_name,s.phone,s.email,s.city,s.license_key].join(" ").toLowerCase().includes(q)));
   $("#app").innerHTML = `<div class="page">
   <div class="topbar"><div class="logo row">${logo()}<div><h1>${t("Admin console")}</h1><span class="small muted">${h(AD.session.user.email)}</span></div></div>
-    <div class="row">${langSwitch()}<button class="btn" data-act="settings">${t("Platform settings")}</button><button class="btn primary" data-act="newrow">${t("New {u}", {u:U1().toLowerCase()})}</button><button class="btn" data-act="signout">${t("Sign out")}</button></div></div>
+    <div class="row">${langSwitch()}<button class="btn" data-act="credits">${t("Add credits")}</button><button class="btn" data-act="settings">${t("Platform settings")}</button><button class="btn primary" data-act="newrow">${t("New {u}", {u:U1().toLowerCase()})}</button><button class="btn" data-act="signout">${t("Sign out")}</button></div></div>
   <div class="grid g4">
     <div class="card stat"><span class="k">${t("Paying")}</span><span class="v">${cnt("active")+cnt("soon")}</span><span class="s">${t("{n} on trial", {n:cnt("trial")})}</span></div>
     <div class="card stat"><span class="k">${t("Ending within 7 days")}</span><span class="v">${cnt("soon")}</span><span class="s">${t("remind them to renew")}</span></div>
@@ -192,6 +192,7 @@ function drawer(){
   const st = statusOf(s), pays = AD.payments.filter(p => p.tenant_id === s.id);
   const base = new Date(Math.max(Date.now(), new Date(s.expires_at)));
   const plus = m => { const d = new Date(base); d.setMonth(d.getMonth()+m); return dayKey(d); };
+  const plusDays = n => { const d = new Date(base); d.setDate(d.getDate()+n); return dayKey(d); };
   return `<div class="drawer-bg" data-act="close"></div><aside class="drawer" role="dialog" aria-modal="true">
     <div class="card-h"><h2>${h(s.name)}</h2><button class="btn sm" data-act="close">${t("Close")}</button></div>
     <div class="row"><span class="pill ${st[2]}">${st[1]}</span><span class="small muted">${t("Valid until {d}", {d:dOnly(s.expires_at)})} · ${TIERS()[tierOf(s)]} · ${PLAN()[s.plan]}</span></div>
@@ -204,7 +205,7 @@ function drawer(){
     </div>
     ${usersCard(s)}
     <form class="card" data-form="extend" data-id="${s.id}"><div class="card-h"><h3>${t("Record a payment and extend")}</h3></div>
-      <div class="row"><button type="button" class="btn sm" data-act="preset" data-until="${plus(1)}" data-amount="${tierPrice(s,"monthly")||""}" data-plan="monthly">+1 ${t("month")}</button><button type="button" class="btn sm" data-act="preset" data-until="${plus(3)}" data-amount="${tierPrice(s,"monthly")*3||""}" data-plan="monthly">+3 ${t("months")}</button><button type="button" class="btn sm" data-act="preset" data-until="${plus(12)}" data-amount="${tierPrice(s,"yearly")||""}" data-plan="yearly">+1 ${t("year")}</button></div>
+      <div class="row"><button type="button" class="btn sm" data-act="preset" data-until="${plusDays(7)}" data-amount="${AD.settings.weekly_price||""}" data-plan="custom">+1 ${t("week")}</button><button type="button" class="btn sm" data-act="preset" data-until="${plus(1)}" data-amount="${tierPrice(s,"monthly")||""}" data-plan="monthly">+1 ${t("month")}</button><button type="button" class="btn sm" data-act="preset" data-until="${plus(3)}" data-amount="${tierPrice(s,"monthly")*3||""}" data-plan="monthly">+3 ${t("months")}</button><button type="button" class="btn sm" data-act="preset" data-until="${plus(12)}" data-amount="${tierPrice(s,"yearly")||""}" data-plan="yearly">+1 ${t("year")}</button></div>
       <div class="fields">
         <label>${t("Valid until")}<input id="exUntil" type="date" value="${plus(1)}" required></label>
         <label>${t("Plan")}<select id="exPlan">${Object.entries(PLAN()).map(([k,v])=>`<option value="${k}" ${k===(s.plan==="trial"?"monthly":s.plan)?"selected":""}>${v}</option>`).join("")}</select></label>
@@ -279,6 +280,24 @@ function newModal(){
       <label>${t("Start with")}<select id="fPlan"><option value="trial">${t("Free trial ({n} days)", {n:AD.settings.trial_days??14})}</option><option value="monthly">${t("1 month (paid)")}</option><option value="yearly">${t("1 year (paid)")}</option></select></label>
     </div>${footer(t("Create and get key"))}</form>`);
 }
+/* Credit packs bought by app users (no subscription). */
+const PACKS = (window.ADMIN_CONFIG && ADMIN_CONFIG.creditPacks) || [];
+async function creditsModal(){
+  modal(`<form data-form="credits"><h2>${t("Add credits")}</h2><p class="small muted">${t("For a customer who bought a credit pack. They must already have an account in the app.")}</p>
+    ${PACKS.length ? `<div class="row">${PACKS.map(p => `<button type="button" class="btn sm" data-act="pack" data-c="${p.credits}" data-p="${p.price}">${p.credits} · ${num(p.price)} ${h(AD.settings.currency||"")}</button>`).join("")}</div>` : ""}
+    <div class="fields">
+      <label>${t("Customer email")}<input id="crEmail" type="email" required autocomplete="off"></label>
+      <label>${t("Credits")}<input id="crCredits" type="number" step="1" required></label>
+      <label>${t("Amount received")}<input id="crPaid" type="number" min="0" step="any"></label>
+      <label>${t("Method")}<select id="crMethod">${C.payMethods.map(m=>`<option>${h(t(m))}</option>`).join("")}</select></label>
+      <label>${t("Reference / note")}<input id="crNote" placeholder="${t("e.g. transaction ID")}"></label>
+    </div>${footer(t("Add credits"))}
+    <div id="crSales"><p class="small muted">${t("Loading…")}</p></div></form>`);
+  const { data, error } = await sb.rpc("admin_credit_sales", { p_limit:20 });
+  const box = $("#crSales"); if (!box) return;
+  box.innerHTML = error ? `<p class="err">${h(errMsg(error))}</p>` : !(data||[]).length ? `<p class="small muted">${t("No credit sales yet.")}</p>`
+    : `<h3>${t("Recent credit sales")}</h3><div class="tw"><table><tbody>${data.map(r => `<tr><td>${dOnly(r.created_at)}</td><td class="mono small">${h(r.email)}</td><td class="r num">+${num(r.amount,0)}</td><td class="small muted">${h(String(r.reason||"").replace(/^Bought · ?/,""))}</td></tr>`).join("")}</tbody></table></div>`;
+}
 function settingsModal(){
   const p = AD.settings;
   modal(`<form data-form="settings"><h2>${t("Platform settings")}</h2><p class="small muted">${t("Used in messages to customers and on the public prices page.")}</p>
@@ -286,6 +305,7 @@ function settingsModal(){
       <label>${t("Brand name")}<input id="psBrand" value="${h(p.brand)}"></label><label>${t("Support phone")}<input id="psPhone" value="${h(p.support_phone)}"></label>
       <label>WhatsApp<input id="psWa" value="${h(p.support_whatsapp)}" placeholder="${h(C.phoneHint)}"></label><label>${t("Support email")}<input id="psEmail" type="email" value="${h(p.support_email)}"></label>
       <label>${t("Currency")}<input id="psCur" value="${h(p.currency)}"></label><label>${t("Free trial (days)")}<input id="psT" type="number" min="0" step="1" value="${h(p.trial_days)}"></label>
+      <label>${t("Weekly pass price")}<input id="psWeek" type="number" min="0" step="any" value="${h(p.weekly_price??1000)}"></label>
     </div>
     <div class="tw"><table><thead><tr><th>${t("Plan size")}</th><th>${t("Users")}</th><th>${t("Monthly price")}</th><th>${t("Yearly price")}</th></tr></thead><tbody>
     ${Object.entries(TIERS()).map(([k,n]) => { const x = tiers()[k]||{}; return `<tr><td><b>${n}</b></td><td><input id="pt_${k}_users" type="number" min="1" value="${h(x.users??1)}" style="width:70px"></td><td><input id="pt_${k}_monthly" type="number" min="0" step="any" value="${h(x.monthly??0)}" style="width:110px"></td><td><input id="pt_${k}_yearly" type="number" min="0" step="any" value="${h(x.yearly??0)}" style="width:120px"></td></tr>`; }).join("")}
@@ -310,6 +330,8 @@ document.addEventListener("click", async e => {
     case "view": AD.view = a.dataset.v; render(); break;
     case "newrow": newModal(); break;
     case "settings": settingsModal(); break;
+    case "credits": creditsModal(); break;
+    case "pack": $("#crCredits").value = a.dataset.c; $("#crPaid").value = a.dataset.p; break;
     case "export": toast(t("Preparing the Excel file…")); await exportExcel(); break;
     case "open": AD.open = id; render(); loadMembers(id); break;
     case "close": AD.open = null; render(); break;
@@ -354,9 +376,16 @@ document.addEventListener("submit", async e => {
       if (error) throw error; await loadMembers(tid); loginDone(row, m.email, pass, v("upPhone") || (m.role==="owner" ? row.phone : "")); break; }
     case "uemail": { const { error } = await sb.rpc("admin_set_email", { p_user:f.dataset.uid, p_email:v("ueEmail").toLowerCase() }); if (error) throw error; closeModal(); await loadMembers(tid); toast(t("Email changed.")); break; }
     case "uedit": { const { error } = await sb.rpc("admin_update_member", { p_tenant:tid, p_user:f.dataset.uid, p_role:v("uedRole"), p_name:v("uedName"), p_active:$("#uedActive").checked }); if (error) throw error; closeModal(); await loadMembers(tid); await refresh(t("Saved")); break; }
+    case "credits": {
+      const credits = parseInt(v("crCredits"), 10), paid = Number(v("crPaid")||0), cur = AD.settings.currency || "";
+      if (!credits) return toast(t("Enter a number of credits."));
+      const note = [paid ? `${num(paid)} ${cur}` : "", v("crMethod"), v("crNote")].filter(Boolean).join(" · ");
+      const email = v("crEmail").toLowerCase();
+      const { data, error } = await sb.rpc("admin_add_credits", { p_email:email, p_credits:credits, p_paid:0, p_note:note });
+      if (error) throw error; closeModal(); toast(t("Done. {e} now has {n} credits.", { e:email, n:num(data,0) })); break; }
     case "settings": {
       const tiersNew = Object.fromEntries(Object.keys(C.tiers).map(k => [k, { users:Number(v(`pt_${k}_users`)||1), monthly:Number(v(`pt_${k}_monthly`)||0), yearly:Number(v(`pt_${k}_yearly`)||0) }]));
-      const { error } = await sb.from("platform_settings").update({ brand:v("psBrand"), support_phone:v("psPhone"), support_whatsapp:v("psWa"), support_email:v("psEmail"), currency:v("psCur"), trial_days:Number(v("psT")||0), tiers:tiersNew, updated_at:new Date().toISOString() }).eq("id",1);
+      const { error } = await sb.from("platform_settings").update({ brand:v("psBrand"), support_phone:v("psPhone"), support_whatsapp:v("psWa"), support_email:v("psEmail"), currency:v("psCur"), trial_days:Number(v("psT")||0), weekly_price:Number(v("psWeek")||0), tiers:tiersNew, updated_at:new Date().toISOString() }).eq("id",1);
       if (error) throw error; closeModal(); await refresh(t("Saved")); break; }
   } } catch(err){ toast(errMsg(err)); }
 });
