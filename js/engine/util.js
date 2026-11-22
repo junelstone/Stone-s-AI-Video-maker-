@@ -86,12 +86,59 @@ const EMOJI_WORDS = [
   [['diamond', 'luxury', 'gold', 'premium'], '💎'],
 ];
 
+// Extra keywords: events and French words, so French prompts get matching icons too.
+const EMOJI_WORDS_EXTRA = [
+  [['birthday', 'anniversaire', 'cake', 'gateau', 'gâteau', 'celebrate', 'celebration', 'fête', 'fete'], '🎂'],
+  [['church', 'église', 'eglise', 'god', 'dieu', 'jesus', 'jésus', 'pray', 'prière', 'priere', 'worship', 'culte', 'gospel', 'bless', 'blessed', 'béni'], '🙏'],
+  [['wedding', 'mariage', 'married'], '💍'],
+  [['shop', 'store', 'boutique', 'magasin', 'order', 'commande', 'commandez', 'buy', 'achetez', 'livraison', 'delivery'], '🛍️'],
+  [['mer', 'océan', 'ocean', 'vague', 'vagues', 'plage'], '🌊'],
+  [['soleil', 'coucher', 'été', 'ete'], '🌅'],
+  [['étoile', 'étoiles', 'etoile', 'etoiles'], '✨'],
+  [['espace', 'fusée', 'fusee', 'astronaute', 'lune'], '🚀'],
+  [['ville', 'rue', 'quartier'], '🏙️'],
+  [['forêt', 'foret', 'arbre', 'arbres', 'nature'], '🌲'],
+  [['montagne', 'montagnes', 'aventure'], '🏔️'],
+  [['feu', 'énergie', 'energie'], '🔥'],
+  [['amour', 'coeur', 'cœur'], '❤️'],
+  [['musique', 'chanson', 'danse', 'soirée', 'soiree'], '🎵'],
+  [['argent', 'affaires', 'entreprise', 'business', 'ventes', 'prix'], '💰'],
+  [['idée', 'idee', 'idées', 'conseil', 'conseils', 'astuce', 'astuces', 'apprendre'], '💡'],
+  [['pluie', 'orage', 'nuage'], '🌧️'],
+  [['noël', 'noel', 'hiver', 'neige'], '❄️'],
+  [['chat', 'chats'], '🐱'],
+  [['chien', 'chiens'], '🐶'],
+  [['dragon', 'magie'], '🐉'],
+  [['robot', 'avenir', 'futur', 'technologie', 'tech'], '🤖'],
+  [['voiture', 'course', 'vitesse'], '🏎️'],
+  [['nourriture', 'manger', 'restaurant', 'cuisine', 'plat', 'repas'], '🍕'],
+  [['café', 'cafe', 'matin'], '☕'],
+  [['voyage', 'vol', 'avion', 'vacances'], '✈️'],
+  [['fleur', 'fleurs', 'printemps', 'jardin'], '🌸'],
+  [['jeu', 'jeux'], '🎮'],
+  [['sport', 'foot', 'football', 'match', 'équipe', 'equipe'], '⚽'],
+  [['gagner', 'gagnant', 'champion', 'succès', 'succes', 'victoire', 'réussite', 'reussite'], '🏆'],
+  [['livre', 'livres', 'histoire', 'école', 'ecole', 'étude', 'etude', 'cours', 'élèves', 'eleves'], '📚'],
+  [['téléphone', 'telephone', 'application', 'ligne', 'réseaux', 'reseaux'], '📱'],
+  [['film', 'vidéo', 'video', 'cinéma', 'cinema', 'photo'], '🎬'],
+  [['heureux', 'sourire', 'joie', 'bonheur'], '😄'],
+  [['nuit', 'rêve', 'reve', 'rêves', 'sommeil'], '🌙'],
+  [['monde', 'terre', 'planète', 'planete', 'afrique', 'congo', 'brazzaville'], '🌍'],
+  [['santé', 'sante', 'gym', 'fort', 'forme'], '💪'],
+  [['temps', 'aujourd', 'maintenant', 'heure'], '⏰'],
+  [['cadeau', 'cadeaux', 'promo', 'promotion', 'réduction', 'reduction', 'offre', 'solde', 'soldes'], '🎁'],
+  [['maison', 'appartement', 'immobilier'], '🏡'],
+  [['hôtel', 'hotel', 'chambre', 'séjour', 'sejour'], '🏨'],
+  [['croissance', 'grandir', 'hausse'], '📈'],
+  [['luxe', 'premium', 'diamant'], '💎'],
+];
+
 const EMOJI_LOOKUP = new Map();
-for (const [words, emoji] of EMOJI_WORDS) for (const w of words) EMOJI_LOOKUP.set(w, emoji);
+for (const [words, emoji] of [...EMOJI_WORDS, ...EMOJI_WORDS_EXTRA]) for (const w of words) if (!EMOJI_LOOKUP.has(w)) EMOJI_LOOKUP.set(w, emoji);
 
 export function emojisFor(text, max = 3) {
   const out = [];
-  for (const raw of text.toLowerCase().split(/[^a-z0-9']+/)) {
+  for (const raw of text.toLowerCase().split(/[^a-z0-9\u00c0-\u017f\u0153]+/)) {
     const e = EMOJI_LOOKUP.get(raw) || EMOJI_LOOKUP.get(raw.replace(/s$/, ''));
     if (e && !out.includes(e)) out.push(e);
     if (out.length >= max) break;

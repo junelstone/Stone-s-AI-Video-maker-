@@ -6,7 +6,14 @@ const SONGS = {
   anime: { bpm: 128, prog: [[60, 64, 67], [55, 59, 62], [57, 60, 64], [53, 57, 60]], wave: 'square', cutoff: 2200, arp: true, kick: true },
   '3d': { bpm: 110, prog: [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]], wave: 'sawtooth', cutoff: 1600, arp: true, kick: true },
   explainer: { bpm: 100, prog: [[60, 64, 67], [65, 69, 72], [55, 59, 62], [60, 64, 67]], wave: 'triangle', cutoff: 3000, arp: true, kick: false },
+  // Moods the user can pick instead of the style's own music.
+  calm: { bpm: 64, prog: [[60, 64, 67, 71], [57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 65]], wave: 'sine', cutoff: 1400, arp: false, kick: false },
+  upbeat: { bpm: 122, prog: [[60, 64, 67], [67, 71, 74], [69, 72, 76], [65, 69, 72]], wave: 'square', cutoff: 2600, arp: true, kick: true },
+  afro: { bpm: 104, prog: [[57, 60, 64], [62, 65, 69], [55, 59, 62], [60, 64, 67]], wave: 'triangle', cutoff: 2400, arp: true, kick: true, shaker: true },
+  gospel: { bpm: 76, prog: [[60, 64, 67, 70], [65, 69, 72], [67, 71, 74, 77], [60, 64, 67]], wave: 'triangle', cutoff: 1800, arp: false, kick: false },
 };
+
+export const MOODS = ['auto', 'calm', 'upbeat', 'afro', 'gospel'];
 
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -29,9 +36,9 @@ export class Soundtrack {
     return this.dest.stream.getAudioTracks()[0];
   }
 
-  async start(style, duration, { volume = 0.5 } = {}) {
+  async start(style, duration, { volume = 0.5, mood = 'auto' } = {}) {
     if (this.ctx.state === 'suspended') await this.ctx.resume();
-    const song = SONGS[style] || SONGS.cinematic;
+    const song = (mood && mood !== 'auto' && SONGS[mood]) || SONGS[style] || SONGS.cinematic;
     const c = this.ctx;
     const t0 = c.currentTime + 0.05;
     const beat = 60 / song.bpm;
@@ -65,6 +72,7 @@ export class Soundtrack {
         }
       }
       if (song.kick) for (let i = 0; i < 4; i++) this.kick(start + i * beat);
+      if (song.shaker) for (let i = 0; i < 8; i++) this.shaker(start + i * beat * 0.5 + (i % 2 ? beat * 0.08 : 0), i % 2 ? 0.05 : 0.025);
     }
   }
 
@@ -96,6 +104,28 @@ export class Soundtrack {
     o.start(start);
     o.stop(start + 0.25);
     this.nodes.push(o);
+  }
+
+  shaker(start, gain) {
+    const c = this.ctx;
+    if (!this.noise) {
+      const buf = c.createBuffer(1, c.sampleRate * 0.1, c.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      this.noise = buf;
+    }
+    const src = c.createBufferSource();
+    src.buffer = this.noise;
+    const hp = c.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 6000;
+    const g = c.createGain();
+    g.gain.setValueAtTime(gain, start);
+    g.gain.exponentialRampToValueAtTime(0.001, start + 0.08);
+    src.connect(hp).connect(g).connect(this.master);
+    src.start(start);
+    src.stop(start + 0.1);
+    this.nodes.push(src);
   }
 
   stop() {

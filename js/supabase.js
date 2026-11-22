@@ -1,6 +1,9 @@
 // Supabase client, sign-in and credits.
 import { CONFIG } from './config.js';
 
+// Opened from a "reset password" email? Read this before the client clears the link.
+const RECOVERY_LINK = /type=recovery/.test(location.hash) || /type=recovery/.test(location.search);
+
 let createClient = null;
 try {
   ({ createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm'));
@@ -14,6 +17,31 @@ export const supabase = createClient && CONFIG.SUPABASE_URL && CONFIG.SUPABASE_K
 
 let user = null;
 const listeners = new Set();
+let recovering = RECOVERY_LINK;
+const recoveryListeners = new Set();
+supabase?.auth.onAuthStateChange((event) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    recovering = true;
+    recoveryListeners.forEach((fn) => fn());
+  }
+});
+
+// Runs fn when the person arrives from a password reset email.
+export function onPasswordRecovery(fn) {
+  recoveryListeners.add(fn);
+  if (recovering) fn();
+}
+
+export async function resetPassword(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  if (error) throw error;
+}
+
+export async function updatePassword(password) {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+  recovering = false;
+}
 
 export const currentUser = () => user;
 export const cloudEnabled = () => !!supabase;
