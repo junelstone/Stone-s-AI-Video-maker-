@@ -4,6 +4,7 @@ import { AVATARS, drawAvatarIcon } from './engine/avatar.js';
 import { supabase, initAuth, onAuthChange, currentUser, signIn, signUp, signOut, getProfile, spendCredits, cloudEnabled, activateKey, getPricing, resetPassword, updatePassword, onPasswordRecovery } from './supabase.js';
 import { localStore, saveVideo, listCloudVideos, signedVideoUrl, deleteVideo, backupVideo } from './store.js';
 import { t, tn, getLang, setLang, applyI18n, onLangChange } from './i18n.js';
+import { scenePictures } from './engine/aipictures.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -28,7 +29,12 @@ const state = {
   logo: null, // data URL of the customer's logo
   voiceManual: false,
   tplCat: 'all',
+  visuals: 'ai', // 'ai' = free AI pictures per scene, 'icons' = instant animated icons
+  lastFill: null, // { en, fr } text the app put in the prompt, so it can follow the language
+  gq: '',
+  gmode: 'all',
 };
+const VISUALS_KEY = 'stoneai.visuals';
 const LOGO_KEY = 'stoneai.logo';
 
 const PLACEHOLDERS = {
@@ -105,6 +111,18 @@ const TEMPLATES = [
   { cat: 'events', mode: 'text', style: '3d', aspect: '9:16', name: ['Party night', 'Soirée'],
     en: 'Party night this Friday! Music, dance and good vibes. DJ live until midnight. Bring your friends!',
     fr: 'Grande soirée ce vendredi ! Musique, danse et bonne ambiance. DJ en live jusqu\'à minuit. Venez avec vos amis !' },
+  { cat: 'events', mode: 'text', style: 'cinematic', aspect: '9:16', name: ['In loving memory', 'En mémoire'],
+    en: 'In loving memory of our dear father. A life of love, work and faith. Rest in peace. You will always be in our hearts.',
+    fr: 'En mémoire de notre cher papa. Une vie d\'amour, de travail et de foi. Repose en paix. Tu resteras toujours dans nos cœurs.' },
+  { cat: 'events', mode: 'text', style: 'anime', aspect: '9:16', name: ['Graduation', 'Remise de diplôme'],
+    en: 'Congratulations graduate! Years of hard work, and today you did it. The future is yours. We are so proud of you!',
+    fr: 'Félicitations au nouveau diplômé ! Des années de travail, et aujourd\'hui tu as réussi. L\'avenir est à toi. Nous sommes si fiers de toi !' },
+  { cat: 'events', mode: 'text', style: 'explainer', aspect: '1:1', name: ['Association meeting', 'Réunion d\'association'],
+    en: 'General meeting of our association this Saturday at ten. Agenda: projects, budget and elections. Every member is expected.',
+    fr: 'Assemblée générale de notre association ce samedi à dix heures. Ordre du jour : projets, budget et élections. Tous les membres sont attendus.' },
+  { cat: 'learn', mode: 'text', style: 'explainer', aspect: '9:16', name: ['School opening', 'Rentrée scolaire'],
+    en: 'Registrations are open for the new school year. Qualified teachers, small classes and a safe campus. Visit us this week.',
+    fr: 'Les inscriptions sont ouvertes pour la rentrée. Enseignants qualifiés, petites classes et campus sécurisé. Venez nous voir cette semaine.' },
   { cat: 'church', mode: 'text', style: 'cinematic', aspect: '9:16', name: ['Sunday service', 'Culte du dimanche'],
     en: 'Join us this Sunday for worship. Praise, prayer and the word of God. Everyone is welcome. God bless you.',
     fr: 'Rejoignez-nous ce dimanche pour le culte. Louange, prière et parole de Dieu. Tout le monde est le bienvenu. Que Dieu vous bénisse.' },
@@ -145,6 +163,7 @@ function setMode(mode) {
   $('#imageField').classList.toggle('hidden', mode !== 'image');
   $('#avatarField').classList.toggle('hidden', mode !== 'avatar');
   $('#durationWrap').classList.toggle('hidden', mode === 'avatar');
+  $('#visualField').classList.toggle('hidden', mode !== 'text');
   $('#prompt').placeholder = PLACEHOLDERS[getLang()][mode];
   updateCostLabel();
   markStale();
@@ -340,6 +359,7 @@ async function openAccount() {
   const u = currentUser();
   $('#accountEmail').textContent = u.email;
   $('#accountCredits').textContent = state.profile.credits;
+  $('#accountCredits').nextElementSibling.textContent = state.profile.unlimited ? t('credits kept for later') : t('credits');
   $('#accountPlan').textContent = t((state.profile.plan || 'free').replace(/^./, (c) => c.toUpperCase()));
   $('#accountBuy').textContent = state.profile.unlimited ? t('See plans and prices') : '◆ ' + t('Get more credits');
   $('#accountBuy').className = `btn ${state.profile.unlimited ? 'btn-ghost' : 'btn-primary'} btn-block`;
@@ -426,14 +446,24 @@ function renderPricing(remote) {
       what: t('the {name} plan ({m} per month or {y} per year)', { name: x.name, m: fcfa(x.monthly, cur), y: fcfa(x.yearly, cur) }),
     })),
   ];
-  $('#plansGrid').innerHTML = plans.map((p) => `
-    <div class="plan${p.featured ? ' featured' : ''}">
-      ${p.featured ? `<span class="badge">${esc(t('Most popular'))}</span>` : ''}
+  // Mark the plan the person already has.
+  const sub = state.profile.sub;
+  const mine = sub?.open ? sub.tier : null;
+  plans.forEach((p, i) => { p.k = i === 0 ? 'weekly' : tiers[i - 1].k; });
+  const until = sub ? new Date(sub.expires_at).toLocaleDateString(getLang() === 'fr' ? 'fr-FR' : undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  $('#plansGrid').innerHTML = plans.map((p) => {
+    const isMine = mine && p.k === mine;
+    const badge = isMine ? t('Your plan') : p.featured && !mine ? t('Most popular') : '';
+    return `
+    <div class="plan${isMine || (p.featured && !mine) ? ' featured' : ''}">
+      ${badge ? `<span class="badge">${esc(badge)}</span>` : ''}
       <b>${esc(p.name)}</b>
       <span class="amt">${esc(fcfa(p.amt, cur))} <small>/ ${p.per}</small></span>
       <span class="meta">${esc(t('Unlimited videos'))} · ${esc(p.meta)}</span>
-      ${choose(p.what, p.featured)}
-    </div>`).join('');
+      ${isMine ? `<span class="meta mine">${esc(t('Active until {d}', { d: until }))}</span>` : ''}
+      ${isMine && wa ? `<a class="btn btn-primary btn-choose" target="_blank" rel="noopener" href="${esc(link(t('to renew {what}', { what: p.what })))}">${esc(t('Renew'))}</a>` : choose(p.what, p.featured && !mine)}
+    </div>`;
+  }).join('');
 
   $('#packsGrid').innerHTML = P.packs.map((k) => `
     <div class="pack${k.best ? ' featured' : ''}">
@@ -547,9 +577,24 @@ async function generate() {
 
   try {
     const provider = getProvider(state.engine);
-    const out = await provider.generate(job, {
+    let onProgress = setProgress;
+    let renderJob = job;
+    if (job.mode === 'text' && state.visuals === 'ai' && provider.id === 'demo') {
+      // Free AI pictures first (about half of the bar), then animate them.
+      setStage('plan', 'Drawing AI pictures…');
+      try {
+        const pics = await scenePictures(job, { onProgress: (p) => setProgress(0.02 + p * 0.45), signal: state.abort.signal });
+        renderJob = { ...job, mode: 'image', images: pics, sceneImages: true };
+        onProgress = (p) => setProgress(0.47 + p * 0.53);
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        console.warn(e);
+        toast(t('AI pictures are busy right now, using animated icons instead.'), 4000);
+      }
+    }
+    const out = await provider.generate(renderJob, {
       canvas: $('#canvas'),
-      onProgress: setProgress,
+      onProgress,
       onStage: setStage,
       signal: state.abort.signal,
     });
@@ -655,7 +700,12 @@ function renderGallery() {
   const grid = $('#galleryGrid');
   grid.innerHTML = '';
   $('#galleryEmpty').classList.toggle('hidden', state.gallery.length > 0);
-  for (const item of state.gallery) {
+  $('#galleryTools').classList.toggle('hidden', state.gallery.length < 4);
+  const q = state.gq.trim().toLowerCase();
+  const shown = state.gallery.filter((i) => (state.gmode === 'all' || i.mode === state.gmode)
+    && (!q || `${i.title} ${i.prompt || ''}`.toLowerCase().includes(q)));
+  $('#galleryNone').classList.toggle('hidden', shown.length > 0 || !state.gallery.length);
+  for (const item of shown) {
     const b = document.createElement('button');
     b.className = 'gcard';
     const date = new Date(item.createdAt).toLocaleDateString(getLang() === 'fr' ? 'fr-FR' : undefined, { month: 'short', day: 'numeric' });
@@ -751,12 +801,21 @@ function renderTemplates() {
       setStyle(it.style);
       setAspect(it.aspect);
       $('#prompt').value = fr ? it.fr : it.en;
+      state.lastFill = { en: it.en, fr: it.fr };
       updateCount();
       $('#create').scrollIntoView({ behavior: 'smooth' });
       if (it.mode === 'image' && !state.images.length) toast(t('Now add your photos 🖼️'));
     };
     grid.appendChild(b);
   }
+}
+
+/* ---------------- Visuals (AI pictures or icons) ---------------- */
+function setVisuals(v) {
+  state.visuals = v === 'icons' ? 'icons' : 'ai';
+  setChip('visualChips', 'visuals', state.visuals);
+  try { localStorage.setItem(VISUALS_KEY, state.visuals); } catch { /* private mode */ }
+  markStale();
 }
 
 /* ---------------- Logo ---------------- */
@@ -799,6 +858,12 @@ async function setLogo(file) {
 
 /* ---------------- Language ---------------- */
 function renderLanguage() {
+  // A template or "Surprise me" text the person has not edited follows the language.
+  const f = state.lastFill;
+  if (f && [f.en, f.fr].includes($('#prompt').value)) {
+    $('#prompt').value = f[getLang()];
+    updateCount();
+  }
   $('#langBtn').textContent = getLang() === 'fr' ? 'EN' : 'FR';
   $('#langBtn').title = getLang() === 'fr' ? 'Switch to English' : 'Passer en français';
   $('#prompt').placeholder = PLACEHOLDERS[getLang()][state.mode];
@@ -849,7 +914,9 @@ function bind() {
   };
   $('#surpriseBtn').onclick = () => {
     const list = SURPRISE[getLang()][state.mode];
-    $('#prompt').value = list[Math.floor(Math.random() * list.length)];
+    const i = Math.floor(Math.random() * list.length);
+    $('#prompt').value = list[i];
+    state.lastFill = { en: SURPRISE.en[state.mode][i], fr: SURPRISE.fr[state.mode][i] };
     updateCount();
     markStale();
   };
@@ -880,6 +947,13 @@ function bind() {
     speechSynthesis.speak(u);
   };
 
+  $$('#visualChips .chip').forEach((b) => (b.onclick = () => setVisuals(b.dataset.visuals)));
+  $('#gallerySearch').oninput = (e) => { state.gq = e.target.value; renderGallery(); };
+  $$('#galleryModes .chip').forEach((b) => (b.onclick = () => {
+    state.gmode = b.dataset.gmode;
+    $$('#galleryModes .chip').forEach((x) => x.classList.toggle('active', x === b));
+    renderGallery();
+  }));
   $('#moodSelect').onchange = (e) => { state.mood = e.target.value; markStale(); };
   $('#logoInput').onchange = (e) => { setLogo(e.target.files[0]); e.target.value = ''; };
   $('#logoRemove').onclick = () => {
@@ -1035,11 +1109,13 @@ function bind() {
 async function main() {
   $('#year').textContent = new Date().getFullYear();
   try { state.logo = localStorage.getItem(LOGO_KEY); } catch { /* private mode */ }
+  try { if (localStorage.getItem(VISUALS_KEY) === 'icons') state.visuals = 'icons'; } catch { /* private mode */ }
   applyI18n();
   renderAvatarPicker();
   renderTemplates();
   renderLogo();
   bind();
+  setVisuals(state.visuals);
   onLangChange(renderLanguage);
   renderLanguage();
   setMode('text');
