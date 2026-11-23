@@ -67,11 +67,20 @@
           <div class="field avatar-field hidden" id="avatarField">
             <div class="field-label" data-i18n>Choose your presenter</div>
             <div class="avatar-picker" id="avatarPicker"></div>
-            <div class="voice-row">
+            <div class="voice-row hidden" id="browserVoiceRow">
               <label for="voiceSelect" data-i18n>Voice</label>
               <select id="voiceSelect"></select>
               <button class="chip-btn" id="voiceTest" type="button">▶ <span data-i18n>Test</span></button>
             </div>
+          </div>
+
+          <div class="field" id="voiceoverField">
+            <div class="field-label" data-i18n>Voice-over</div>
+            <div class="voice-row voiceover-row">
+              <select id="voiceoverSelect" aria-label="Voice-over"></select>
+              <button class="chip-btn" id="voiceoverTest" type="button">▶ <span data-i18n>Test</span></button>
+            </div>
+            <p class="fine hidden" id="voiceoverNote" data-i18n>The first use downloads this voice once (about 60 MB).</p>
           </div>
 
           <div class="field">
@@ -335,6 +344,10 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <!-- The free in-browser voice (Piper) needs the ONNX runtime; the import map tells the browser where it is. -->
+  <script type="importmap">
+    { "imports": { "onnxruntime-web/wasm": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/esm/ort.wasm.min.js" } }
+  </script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

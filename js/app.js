@@ -5,6 +5,7 @@ import { supabase, initAuth, onAuthChange, currentUser, signIn, signUp, signOut,
 import { localStore, saveVideo, listCloudVideos, signedVideoUrl, deleteVideo, backupVideo } from './store.js';
 import { t, tn, getLang, setLang, applyI18n, onLangChange } from './i18n.js';
 import { scenePictures } from './engine/aipictures.js';
+import { VOICEOVERS, voiceById, defaultVoice, voiceSupported, speak, storedVoices } from './engine/voiceover.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -28,6 +29,9 @@ const state = {
   mood: 'auto',
   logo: null, // data URL of the customer's logo
   voiceManual: false,
+  voiceover: null, // Piper voice id, or 'none' (no voice; the browser voice for avatars)
+  voiceoverManual: false,
+  voicesStored: [],
   tplCat: 'all',
   visuals: 'ai', // 'ai' = free AI pictures per scene, 'icons' = instant animated icons
   lastFill: null, // { en, fr } text the app put in the prompt, so it can follow the language
@@ -36,6 +40,7 @@ const state = {
 };
 const VISUALS_KEY = 'stoneai.visuals';
 const LOGO_KEY = 'stoneai.logo';
+const VOICEOVER_KEY = 'stoneai.voiceover';
 
 const PLACEHOLDERS = {
   en: {
@@ -167,6 +172,8 @@ function setMode(mode) {
   $('#prompt').placeholder = PLACEHOLDERS[getLang()][mode];
   updateCostLabel();
   markStale();
+  if (!state.voiceoverManual && state.voiceover) pickDefaultVoiceover();
+  else renderVoiceovers();
   if (mode === 'avatar') loadVoices();
 }
 
@@ -249,6 +256,7 @@ function renderAvatarPicker() {
       $$('.avatar-opt').forEach((x) => x.classList.toggle('active', x === b));
       state.voiceManual = false;
       loadVoices();
+      if (!state.voiceoverManual) pickDefaultVoiceover();
       markStale();
     };
     wrap.appendChild(b);
@@ -300,6 +308,64 @@ function loadVoices() {
 
 function selectedVoice() {
   return voices().find((v) => v.voiceURI === state.voiceURI) || null;
+}
+
+/* ---------------- Voice-over (recorded into the video) ---------------- */
+function pickDefaultVoiceover() {
+  if (!voiceSupported()) { state.voiceover = 'none'; return renderVoiceovers(); }
+  const gender = state.mode === 'avatar' ? AVATARS[state.avatar].gender : undefined;
+  state.voiceover = defaultVoice(getLang(), gender).id;
+  renderVoiceovers();
+}
+
+function renderVoiceovers() {
+  const sel = $('#voiceoverSelect');
+  if (!sel) return;
+  const avatar = state.mode === 'avatar';
+  const none = avatar ? t('Browser voice (plays in the preview only)') : t('No voice');
+  const lang = getLang();
+  const list = voiceSupported() ? [...VOICEOVERS].sort((a, b) => (b.lang === lang) - (a.lang === lang)) : [];
+  sel.innerHTML = list.map((v) => `<option value="${v.id}">${esc(v.label)} · ${esc(t(v.lang === 'fr' ? 'French' : 'English'))} · ${esc(t(v.gender))}</option>`).join('')
+    + `<option value="none">${esc(none)}</option>`;
+  if (!voiceById(state.voiceover)) state.voiceover = 'none';
+  sel.value = state.voiceover;
+  $('#browserVoiceRow').classList.toggle('hidden', !(avatar && state.voiceover === 'none'));
+  $('#voiceoverTest').classList.toggle('hidden', state.voiceover === 'none');
+  $('#voiceoverNote').classList.toggle('hidden', state.voiceover === 'none' || state.voicesStored.includes(state.voiceover));
+}
+
+async function refreshStoredVoices() {
+  state.voicesStored = await storedVoices();
+  renderVoiceovers();
+}
+
+const VOICE_SAMPLE = {
+  fr: 'Bonjour ! Voici la voix de vos vidéos.',
+  en: 'Hello! This is the voice of your videos.',
+};
+
+async function testVoiceover() {
+  const v = voiceById(state.voiceover);
+  if (!v) return;
+  const btn = $('#voiceoverTest');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const label = btn.innerHTML;
+  try {
+    const { wav } = await speak(VOICE_SAMPLE[v.lang], v.id, (stage, f) => {
+      if (stage === 'download') btn.textContent = `⬇ ${Math.round(f * 100)}%`;
+    });
+    btn.textContent = '…';
+    const audio = new Audio(URL.createObjectURL(new Blob([wav], { type: 'audio/wav' })));
+    await audio.play();
+    refreshStoredVoices();
+  } catch (e) {
+    console.warn(e);
+    toast(t('The voice could not be loaded. Check your connection and try again.'), 5000);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = label;
+  }
 }
 
 /* ---------------- Credits & auth UI ---------------- */
@@ -518,7 +584,7 @@ function showStage(view) {
   $('#resultVideo').classList.toggle('hidden', view !== 'result');
   $('#progress').classList.toggle('hidden', view !== 'rendering');
   $('#resultActions').classList.toggle('hidden', view !== 'result');
-  $('#avatarNote').classList.toggle('hidden', !(view === 'result' && state.result?.mode === 'avatar'));
+  $('#avatarNote').classList.toggle('hidden', !(view === 'result' && state.result?.mode === 'avatar' && !state.result?.voiced));
   if (view !== 'result') $('#screen').classList.remove('stale');
 }
 
@@ -577,15 +643,42 @@ async function generate() {
 
   try {
     const provider = getProvider(state.engine);
-    let onProgress = setProgress;
+    // The voice-over is made first (it sets the length of the video), then the pictures.
+    let base = 0;
+    const voice = voiceById(state.voiceover);
+    if (voice && prompt && provider.id === 'demo') {
+      const first = !state.voicesStored.includes(voice.id);
+      setStage('plan', first ? 'Downloading the voice (first time only)…' : 'Recording the voice…');
+      try {
+        const { wav } = await speak(prompt, voice.id, (stage, f) => {
+          if (stage === 'download') {
+            $('#progressStage').textContent = `${t('Downloading the voice (first time only)…')} ${Math.round(f * 100)}%`;
+            setProgress(f * 0.15);
+          } else {
+            $('#progressStage').textContent = t('Recording the voice…');
+            setProgress(0.15 + f * 0.05);
+          }
+        });
+        if (state.abort.signal.aborted) throw new DOMException('Cancelled', 'AbortError');
+        job.voiceWav = wav;
+        base = 0.2;
+        if (first) refreshStoredVoices();
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        console.warn(e);
+        toast(t('The voice could not be made, so this video has no voice.'), 5000);
+      }
+    }
+    const prog = (p) => setProgress(base + p * (1 - base));
+    let onProgress = prog;
     let renderJob = job;
     if (job.mode === 'text' && state.visuals === 'ai' && provider.id === 'demo') {
       // A free AI picture first (about half of the bar), then animate it.
       setStage('plan', 'Drawing the AI picture…');
       try {
-        const pics = await scenePictures(job, { onProgress: (p) => setProgress(0.02 + p * 0.45), signal: state.abort.signal });
+        const pics = await scenePictures(job, { onProgress: (p) => prog(0.02 + p * 0.45), signal: state.abort.signal });
         renderJob = { ...job, mode: 'image', images: pics, sceneImages: true };
-        onProgress = (p) => setProgress(0.47 + p * 0.53);
+        onProgress = (p) => prog(0.47 + p * 0.53);
       } catch (e) {
         if (e.name === 'AbortError') throw e;
         console.warn(e);
@@ -613,6 +706,7 @@ async function generate() {
       ext: out.ext,
       thumb: out.thumb,
       engine: provider.id,
+      voiced: !!job.voiceWav,
     };
     const item = await saveVideo(meta, out.blob);
     state.result = item;
@@ -876,6 +970,8 @@ function renderLanguage() {
   renderGallery();
   refreshCreditsLabelOnly();
   updateBrandNote();
+  if (!state.voiceoverManual) pickDefaultVoiceover();
+  else renderVoiceovers();
   if (state.mode === 'avatar') loadVoices();
 }
 
@@ -952,6 +1048,17 @@ function bind() {
   ['dragenter', 'dragover'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
   ['dragleave', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
   dz.addEventListener('drop', (e) => addImages(e.dataTransfer.files));
+
+  // Voice-over
+  $('#voiceoverSelect').onchange = (e) => {
+    state.voiceover = e.target.value;
+    state.voiceoverManual = true;
+    try { localStorage.setItem(VOICEOVER_KEY, state.voiceover); } catch { /* private mode */ }
+    renderVoiceovers();
+    if (state.mode === 'avatar') loadVoices();
+    markStale();
+  };
+  $('#voiceoverTest').onclick = testVoiceover;
 
   // Voices
   if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = loadVoices;
@@ -1132,6 +1239,10 @@ async function main() {
   $('#year').textContent = new Date().getFullYear();
   try { state.logo = localStorage.getItem(LOGO_KEY); } catch { /* private mode */ }
   try { if (localStorage.getItem(VISUALS_KEY) === 'icons') state.visuals = 'icons'; } catch { /* private mode */ }
+  try {
+    const vo = localStorage.getItem(VOICEOVER_KEY);
+    if (vo && (vo === 'none' || voiceById(vo))) { state.voiceover = vo; state.voiceoverManual = true; }
+  } catch { /* private mode */ }
   applyI18n();
   renderAvatarPicker();
   renderTemplates();
@@ -1142,6 +1253,7 @@ async function main() {
   renderLanguage();
   setMode('text');
   setAspect(state.aspect);
+  refreshStoredVoices();
   showStage('empty');
   if (!supabase) $('#authBtn').classList.add('hidden');
 
