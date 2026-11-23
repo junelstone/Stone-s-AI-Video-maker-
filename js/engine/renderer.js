@@ -39,6 +39,9 @@ async function loadFonts(style) {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Keep long videos under the 100 MB storage limit (about 70 MB, leaving room).
+const bitrateFor = (seconds) => Math.round(Math.min(6_000_000, (70 * 8 * 1_000_000) / Math.max(1, seconds)));
+
 // Estimate when each word is spoken, used for captions and lip sync.
 function wordTimeline(script, rate = 1) {
   const words = script.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
@@ -75,13 +78,43 @@ export async function renderVideo(job, io) {
 
   let duration = job.duration;
   let scenes, words, av, speech;
+
+  // A recorded voice-over (made before rendering) sets the pace of the video.
+  let mix = null, voiceBuf = null;
+  const LEAD = 0.4; // the voice starts a moment after the picture
+  if (job.voiceWav) {
+    try {
+      mix = new Soundtrack();
+      voiceBuf = await mix.ctx.decodeAudioData(job.voiceWav.slice(0));
+    } catch (e) {
+      console.warn('Voice disabled', e);
+      mix?.stop();
+      mix = null;
+      voiceBuf = null;
+    }
+  }
+  const voiceEnd = voiceBuf ? LEAD + voiceBuf.duration : 0;
+
   if (job.mode === 'avatar') {
     av = AVATARS[job.avatar] || AVATARS.nova;
     words = wordTimeline(job.prompt || 'Hello! Welcome to my channel.');
     const last = words[words.length - 1];
-    duration = Math.min(90, last.start + last.dur + 1.2);
+    if (voiceBuf) {
+      // Stretch the estimated word timings to the real voice, for lip sync and captions.
+      const k = voiceBuf.duration / Math.max(0.5, last.start + last.dur - words[0].start);
+      const s0 = words[0].start;
+      for (const wd of words) { wd.start = LEAD + (wd.start - s0) * k; wd.dur *= k; }
+      duration = Math.min(180, voiceEnd + 1.0);
+    } else duration = Math.min(180, last.start + last.dur + 1.2);
+  } else if (voiceBuf) {
+    duration = Math.min(180, Math.max(duration, voiceEnd + 1.0));
   }
-  scenes = planScenes(job.prompt || 'Your story starts here', duration, rng);
+  if (voiceBuf && job.mode !== 'avatar' && voiceEnd + 0.3 < duration) {
+    // Captions follow the voice; the last one stays on screen until the end.
+    scenes = planScenes(job.prompt || 'Your story starts here', voiceEnd + 0.3, rng);
+    const lastScene = scenes[scenes.length - 1];
+    lastScene.dur = duration - lastScene.start;
+  } else scenes = planScenes(job.prompt || 'Your story starts here', duration, rng);
   if (job.mode === 'image' && job.images?.length) {
     // One visual beat per photo, captions run on their own timeline.
     if (job.sceneImages) {
@@ -109,7 +142,19 @@ export async function renderVideo(job, io) {
   const mime = pickMimeType();
   const stream = canvas.captureStream(FPS);
   let music = null;
-  if (job.music) {
+  if (mix) {
+    // Voice-over (with or without music) shares one sound mix.
+    try {
+      if (job.music) await mix.start(job.style, duration, { volume: 0.16, mood: job.mood });
+      else await mix.ready();
+      stream.addTrack(mix.track);
+      music = mix;
+    } catch (e) {
+      console.warn('Sound disabled', e);
+      mix = null;
+      voiceBuf = null;
+    }
+  } else if (job.music) {
     try {
       music = new Soundtrack();
       await music.start(job.style, duration, { volume: job.mode === 'avatar' ? 0.22 : 0.5, mood: job.mood });
@@ -125,13 +170,13 @@ export async function renderVideo(job, io) {
     throw new DOMException('Cancelled', 'AbortError');
   }
 
-  const recorder = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 6_000_000 });
+  const recorder = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: bitrateFor(duration) });
   const chunks = [];
   recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
   const stopped = new Promise((res) => (recorder.onstop = res));
 
   // Speech for the avatar (plays live in the preview).
-  if (job.mode === 'avatar' && 'speechSynthesis' in window) {
+  if (job.mode === 'avatar' && !voiceBuf && 'speechSynthesis' in window) {
     speechSynthesis.cancel();
     speech = new SpeechSynthesisUtterance(job.prompt);
     if (job.voice) speech.voice = job.voice;
@@ -159,6 +204,7 @@ export async function renderVideo(job, io) {
   let thumb = null;
   recorder.start(250);
   const t0 = performance.now();
+  if (voiceBuf) mix.playVoice(voiceBuf, LEAD);
   if (speech) setTimeout(() => speechSynthesis.speak(speech), 500);
 
   await new Promise((resolve, reject) => {
